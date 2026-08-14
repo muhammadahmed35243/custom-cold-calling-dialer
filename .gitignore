@@ -32,3 +32,9 @@ yarn-error.log*
 
 # Local dev tools
 .tools
+
+# Claude Code session state
+.claude
+
+# TypeScript incremental build cache
+*.tsbuildinfo
