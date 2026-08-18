@@ -1,22 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { verifyTwilioSignature } from "@/lib/twilio";
+import { verifyTelnyxSignature } from "@/lib/telnyx";
 
 export async function POST(req: NextRequest) {
-  const signature = req.headers.get("x-twilio-signature") || "";
+  const signature = req.headers.get("telnyx-signature-ed25519") || "";
+  const timestamp = req.headers.get("telnyx-timestamp") || "";
 
-  // Parse form data
-  const formData = await req.formData();
-  const body: Record<string, string> = {};
-  formData.forEach((value, key) => {
-    body[key] = value as string;
-  });
+  const rawBody = await req.text();
 
-  // Verify Twilio signature
-  const url = `${process.env.NEXT_PUBLIC_APP_URL}/api/calls/status`;
-  if (!verifyTwilioSignature(body, signature, url)) {
+  if (!verifyTelnyxSignature(rawBody, signature, timestamp)) {
     return new NextResponse("Signature verification failed", { status: 403 });
   }
+
+  const body = Object.fromEntries(new URLSearchParams(rawBody));
 
   try {
     const callSid = body.CallSid;

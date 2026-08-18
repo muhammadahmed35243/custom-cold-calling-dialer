@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { buildComplianceAndDialTwiML, verifyTwilioSignature } from "@/lib/twilio";
+import { buildComplianceAndDialTeXML, verifyTelnyxSignature } from "@/lib/telnyx";
 
 export async function POST(req: NextRequest) {
-  const signature = req.headers.get("x-twilio-signature") || "";
+  const signature = req.headers.get("telnyx-signature-ed25519") || "";
+  const timestamp = req.headers.get("telnyx-timestamp") || "";
   const callRecordId = req.nextUrl.searchParams.get("callRecordId");
 
   if (!callRecordId) {
     return new NextResponse("Missing callRecordId", { status: 400 });
   }
 
-  // Parse form data from Twilio
-  const formData = await req.formData();
-  const body: Record<string, string> = {};
-  formData.forEach((value, key) => {
-    body[key] = value as string;
-  });
+  // Read the raw body first: Telnyx signs the exact raw bytes, not a
+  // re-serialized form of the parsed fields (unlike Twilio's scheme).
+  const rawBody = await req.text();
 
-  // Verify Twilio signature
-  const url = `${process.env.NEXT_PUBLIC_APP_URL}/api/calls/connect?callRecordId=${callRecordId}`;
-  if (!verifyTwilioSignature(body, signature, url)) {
+  if (!verifyTelnyxSignature(rawBody, signature, timestamp)) {
     return new NextResponse("Signature verification failed", { status: 403 });
   }
 
@@ -55,11 +51,11 @@ export async function POST(req: NextRequest) {
       })
       .eq("id", callRecordId);
 
-    // Build TwiML to dial the lead
+    // Build TeXML to dial the lead
     const recordingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/calls/recording`;
-    const twiml = buildComplianceAndDialTwiML(lead.phone, recordingUrl);
+    const texml = buildComplianceAndDialTeXML(lead.phone, recordingUrl);
 
-    return new NextResponse(twiml, {
+    return new NextResponse(texml, {
       headers: { "Content-Type": "application/xml" },
     });
   } catch (error) {

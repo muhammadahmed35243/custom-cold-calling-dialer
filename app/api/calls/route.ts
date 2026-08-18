@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/api-auth";
-import { initiateCall } from "@/lib/twilio";
+import { initiateCall } from "@/lib/telnyx";
 
 export async function POST(req: NextRequest) {
   const { user } = await getAuthenticatedUser(req);
@@ -70,14 +70,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Now call Twilio
+    // Now call Telnyx
     try {
-      const twilioCall = await initiateCall(agent.phone_number, callRecord.id);
+      const providerCall = await initiateCall(agent.phone_number, callRecord.id);
 
-      // Update call record with Twilio SID
+      // Update call record with the provider's call SID
       const { error: updateError } = await supabaseServiceClient
         .from("calls")
-        .update({ twilio_call_sid: twilioCall.sid })
+        .update({ twilio_call_sid: providerCall.sid })
         .eq("id", callRecord.id);
 
       if (updateError) {
@@ -89,11 +89,11 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        call: { ...callRecord, twilio_call_sid: twilioCall.sid },
+        call: { ...callRecord, twilio_call_sid: providerCall.sid },
       });
-    } catch (twilioError) {
-      console.error("Twilio error:", twilioError);
-      // Revert lead lock on Twilio failure
+    } catch (callError) {
+      console.error("Telnyx error:", callError);
+      // Revert lead lock on call-provider failure
       await supabaseServiceClient
         .from("leads")
         .update({
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
         .eq("id", leadId);
 
       return NextResponse.json(
-        { error: `Twilio error: ${twilioError instanceof Error ? twilioError.message : String(twilioError)}` },
+        { error: `Telnyx error: ${callError instanceof Error ? callError.message : String(callError)}` },
         { status: 500 }
       );
     }
