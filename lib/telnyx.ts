@@ -23,6 +23,7 @@ export async function initiateCall(agentPhone: string, callRecordId: string) {
       Url: connectUrl,
       StatusCallback: statusCallbackUrl,
       StatusCallbackEvent: "initiated ringing answered completed",
+      Timeout: "60",
     }),
   });
 
