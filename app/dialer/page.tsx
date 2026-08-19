@@ -403,7 +403,7 @@ export default function DialerPage() {
                       <select
                         value={disposition}
                         onChange={(e) => setDisposition(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select outcome...</option>
                         <option value="connected">Connected</option>
@@ -420,7 +420,7 @@ export default function DialerPage() {
                         value={dispositionNotes}
                         onChange={(e) => setDispositionNotes(e.target.value)}
                         placeholder="Add any notes..."
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         rows={3}
                       />
                     </div>
