@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { leadId } = await req.json();
+    const { leadId, mode } = await req.json();
 
     // Get the lead
     const { data: leadData, error: leadError } = await supabaseServiceClient
@@ -90,6 +90,14 @@ export async function POST(req: NextRequest) {
         { error: `Failed to lock lead: ${lockError.message}` },
         { status: 500 }
       );
+    }
+
+    // WebRTC mode: the browser places the call directly via the SDK --
+    // nothing for the server to dial. Just hand back the row so the
+    // frontend can link its WebRTC call to it and report the outcome to
+    // /api/calls/[id]/webrtc-complete once it ends.
+    if (mode === "webrtc") {
+      return NextResponse.json({ success: true, call: callRecord });
     }
 
     // Now call Telnyx

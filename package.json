@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.5",
+    "@telnyx/webrtc": "^2.27.9",
     "@types/node": "^20.11.0",
     "@types/papaparse": "^5.3.14",
     "@types/react": "^18.2.48",

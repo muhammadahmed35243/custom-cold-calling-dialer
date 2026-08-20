@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import type { Lead, Call } from "@/lib/supabase";
@@ -35,6 +35,14 @@ export default function DialerPage() {
   const [addLeadForm, setAddLeadForm] = useState({ name: "", phone: "", email: "", company: "", notes: "" });
   const [addLeadStatus, setAddLeadStatus] = useState<string>("");
   const [isAddingLead, setIsAddingLead] = useState(false);
+  const [callMode, setCallMode] = useState<"phone" | "webrtc">("phone");
+
+  const webrtcClientRef = useRef<any>(null);
+  const webrtcCallRef = useRef<any>(null);
+  const webrtcReachedActiveRef = useRef(false);
+  const webrtcStartRef = useRef<number | null>(null);
+  const webrtcCallerNumberRef = useRef<string | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -132,6 +140,11 @@ export default function DialerPage() {
   const handleCall = async (lead: Lead) => {
     if (!user) return;
 
+    if (callMode === "webrtc") {
+      await handleWebrtcCall(lead);
+      return;
+    }
+
     try {
       const { data: { session } } = await supabaseAuth.auth.getSession();
       if (!session) {
@@ -158,6 +171,141 @@ export default function DialerPage() {
       }
     } catch (error) {
       setCallStatus(`Error: ${error}`);
+    }
+  };
+
+  // Lazily connects the browser to Telnyx's WebRTC signaling the first time
+  // "Browser" mode is used, rather than on every page load -- most calls
+  // still go via the phone-bridge path. Credentials come from an
+  // authenticated endpoint, not a NEXT_PUBLIC_ var, so they never end up in
+  // the public JS bundle.
+  const ensureWebrtcClient = async () => {
+    if (webrtcClientRef.current) return webrtcClientRef.current;
+
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+    if (!session) return null;
+
+    const credsResponse = await fetch("/api/webrtc-credentials", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!credsResponse.ok) {
+      setCallStatus("Browser calling isn't configured yet");
+      return null;
+    }
+    const creds = await credsResponse.json();
+    webrtcCallerNumberRef.current = creds.callerNumber || null;
+
+    const { TelnyxRTC } = await import("@telnyx/webrtc");
+    const client = new TelnyxRTC({ login: creds.username, password: creds.password });
+    await client.connect();
+
+    webrtcClientRef.current = client;
+    return client;
+  };
+
+  const handleWebrtcCall = async (lead: Lead) => {
+    if (!user) return;
+
+    try {
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      if (!session) {
+        setCallStatus("Session expired, please login again");
+        return;
+      }
+
+      const response = await fetch("/api/calls", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ leadId: lead.id, mode: "webrtc" }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setCallStatus(`Error: ${result.error}`);
+        return;
+      }
+
+      const callRecord = result.call;
+      setActiveCall({ ...callRecord, agent_email: user.email } as Call);
+      setCallStatus("Connecting...");
+
+      const client = await ensureWebrtcClient();
+      if (!client) return;
+
+      webrtcReachedActiveRef.current = false;
+      webrtcStartRef.current = Date.now();
+
+      const call = client.newCall({
+        destinationNumber: lead.phone,
+        callerNumber: webrtcCallerNumberRef.current || undefined,
+        audio: true,
+        remoteElement: remoteAudioRef.current || undefined,
+        onNotification: (notification: any) => {
+          if (notification?.type !== "callUpdate") return;
+          const state = String(notification.call?.state || "").toLowerCase();
+
+          if (state === "active") {
+            webrtcReachedActiveRef.current = true;
+            setCallStatus("Connected");
+          } else if (["ringing", "trying", "requesting", "early", "answering"].includes(state)) {
+            setCallStatus("Ringing...");
+          } else if (["hangup", "destroy", "purge"].includes(state)) {
+            finishWebrtcCall(callRecord.id);
+          }
+        },
+      });
+
+      webrtcCallRef.current = call;
+    } catch (error) {
+      setCallStatus(`Error: ${error}`);
+    }
+  };
+
+  const finishWebrtcCall = async (callId: string) => {
+    const durationSeconds = webrtcStartRef.current
+      ? Math.round((Date.now() - webrtcStartRef.current) / 1000)
+      : 0;
+    const connected = webrtcReachedActiveRef.current;
+    const callControlId = webrtcCallRef.current?.telnyxCallControlId || null;
+    webrtcCallRef.current = null;
+
+    setActiveCall(null);
+    setCallStatus("");
+
+    try {
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      if (session) {
+        await fetch(`/api/calls/${callId}/webrtc-complete`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ connected, durationSeconds, callControlId }),
+        });
+      }
+    } catch {
+      // best-effort -- the call already ended either way
+    }
+
+    await loadLeadsAndCalls();
+    startEdit({ id: callId, disposition: null, notes: null, callback_at: null } as Call);
+  };
+
+  const handleWebrtcHangup = () => {
+    webrtcCallRef.current?.hangup();
+  };
+
+  const handleWebrtcMuteToggle = () => {
+    if (!webrtcCallRef.current) return;
+    if (webrtcCallRef.current.isMuted) {
+      webrtcCallRef.current.unmuteAudio();
+      webrtcCallRef.current.isMuted = false;
+    } else {
+      webrtcCallRef.current.muteAudio();
+      webrtcCallRef.current.isMuted = true;
     }
   };
 
@@ -427,6 +575,8 @@ export default function DialerPage() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader userEmail={user?.email} isAdmin={isAdmin} onSignOut={handleSignOut} />
+      {/* Remote audio for browser (WebRTC) calls -- never rendered visibly */}
+      <audio ref={remoteAudioRef} autoPlay className="hidden" />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="mb-8">
@@ -571,6 +721,30 @@ export default function DialerPage() {
 
           {/* Call Controls */}
           <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Call via</span>
+              <div className="inline-flex rounded-lg border border-border overflow-hidden">
+                <button
+                  onClick={() => setCallMode("phone")}
+                  disabled={!!activeCall}
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                    callMode === "phone" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Phone
+                </button>
+                <button
+                  onClick={() => setCallMode("webrtc")}
+                  disabled={!!activeCall}
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                    callMode === "webrtc" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Browser
+                </button>
+              </div>
+            </div>
+
             {activeCall ? (
               <div className="bg-card border border-border rounded-xl p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -587,6 +761,22 @@ export default function DialerPage() {
                     <div className="text-sm text-muted-foreground font-mono">{currentLead?.phone}</div>
                   </div>
                   <span className="text-sm font-medium text-brand">{callStatus}</span>
+                  {callMode === "webrtc" && (
+                    <div className="flex items-center gap-2 pt-2">
+                      <button
+                        onClick={handleWebrtcMuteToggle}
+                        className="px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors"
+                      >
+                        Mute
+                      </button>
+                      <button
+                        onClick={handleWebrtcHangup}
+                        className="px-3 py-1.5 text-sm bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors"
+                      >
+                        Hang Up
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : currentLead ? (
