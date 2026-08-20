@@ -50,14 +50,6 @@ export default function LoginPage() {
           <p className="text-muted-foreground text-sm mt-2">Sign in to access the dialer</p>
         </div>
 
-        <div className="mb-6">
-          <div className="bg-muted border border-border rounded-lg p-4">
-            <p className="text-sm text-foreground">
-              <strong className="font-medium">Privacy Notice:</strong> Your calls will be recorded for quality assurance and training purposes.
-            </p>
-          </div>
-        </div>
-
         {error && (
           <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
             {error}
