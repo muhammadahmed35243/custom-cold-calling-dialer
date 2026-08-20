@@ -30,40 +30,43 @@ export async function POST(req: NextRequest) {
       return new NextResponse("Call record not found", { status: 404 });
     }
 
-    // Map Twilio CallStatus to our statuses
+    // Map Twilio/TeXML CallStatus to our agent_call_status. This describes
+    // the OUTER call's lifecycle (Telnyx -> agent's phone), not the lead's
+    // leg -- lead_call_status is owned exclusively by /api/calls/dial-status,
+    // which gets the real DialCallStatus once the inner <Dial> concludes.
+    //
+    // Once the agent has actually answered (agent_call_status is already
+    // "completed", set directly by /api/calls/connect), later terminal
+    // events on this same outer call describe how the whole session ended
+    // -- not whether the agent picked up -- so they must not overwrite an
+    // already-confirmed answer.
+    const alreadyAnswered = callRecord.agent_call_status === "completed";
     let agentStatus = callRecord.agent_call_status || "ringing";
-    let leadStatus = callRecord.lead_call_status || "queued";
 
-    if (callStatus === "ringing") {
+    if (callStatus === "ringing" && !alreadyAnswered) {
       agentStatus = "ringing";
     } else if (callStatus === "in-progress") {
       agentStatus = "completed";
-      leadStatus = "ringing";
-    } else if (callStatus === "completed") {
-      if (callRecord.agent_call_status === "completed" && callRecord.lead_call_status === null) {
-        leadStatus = "completed";
-      } else if (callRecord.lead_call_status === "ringing") {
-        leadStatus = "completed";
-      } else {
-        leadStatus = "no_answer";
-      }
-    } else if (callStatus === "no-answer") {
+    } else if (["no-answer", "busy"].includes(callStatus) && !alreadyAnswered) {
       agentStatus = "no_answer";
-    } else if (callStatus === "busy") {
-      agentStatus = "no_answer";
-    } else if (callStatus === "failed") {
+    } else if (callStatus === "failed" && !alreadyAnswered) {
       agentStatus = "failed";
     }
 
     // Update call record
+    const updatePayload: Record<string, unknown> = { agent_call_status: agentStatus };
+
+    // Only this handler's own fallback duration/end-time if the call never
+    // reached the Dial step at all (agent never answered) -- otherwise
+    // dial-status already recorded the real lead-leg duration.
+    if (!alreadyAnswered && callStatus === "completed") {
+      updatePayload.ended_at = new Date().toISOString();
+      updatePayload.duration_seconds = callDuration > 0 ? callDuration : null;
+    }
+
     const { error: updateError } = await supabaseServiceClient
       .from("calls")
-      .update({
-        agent_call_status: agentStatus,
-        lead_call_status: leadStatus,
-        ended_at: callStatus === "completed" ? new Date().toISOString() : null,
-        duration_seconds: callDuration > 0 ? callDuration : null,
-      })
+      .update(updatePayload)
       .eq("id", callRecord.id);
 
     if (updateError) {

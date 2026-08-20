@@ -53,7 +53,8 @@ export async function POST(req: NextRequest) {
 
     // Build TeXML to dial the lead
     const recordingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/calls/recording`;
-    const texml = buildComplianceAndDialTeXML(lead.phone, recordingUrl);
+    const dialStatusUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/calls/dial-status?callRecordId=${callRecordId}`;
+    const texml = buildComplianceAndDialTeXML(lead.phone, recordingUrl, dialStatusUrl);
 
     return new NextResponse(texml, {
       headers: { "Content-Type": "application/xml" },

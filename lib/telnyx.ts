@@ -65,11 +65,11 @@ export function verifyTelnyxSignature(
   }
 }
 
-export function buildComplianceAndDialTeXML(dialTo: string, recordingUrl: string) {
+export function buildComplianceAndDialTeXML(dialTo: string, recordingUrl: string, dialStatusUrl: string) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say>You're using JETZT Dialer. Have a great day.</Say>
-  <Dial callerId="${telnyxPhoneNumber}" record="record-from-answer-dual" recordingStatusCallback="${recordingUrl}" recordingStatusCallbackEvent="completed">
+  <Dial callerId="${telnyxPhoneNumber}" record="record-from-answer-dual" recordingStatusCallback="${recordingUrl}" recordingStatusCallbackEvent="completed" action="${dialStatusUrl}">
     <Number>${dialTo}</Number>
   </Dial>
 </Response>`;
