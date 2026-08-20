@@ -65,19 +65,27 @@ export default function AdminDashboard() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
+    <div className="min-h-screen bg-background">
+      <header className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.email}</span>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ← Dashboard
+            </button>
+            <h1 className="text-lg font-semibold text-foreground">Admin Dashboard</h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">{user?.email}</span>
             <button
               onClick={handleSignOut}
-              className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
+              className="px-3 py-1.5 text-sm bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors"
             >
               Sign Out
             </button>
@@ -86,23 +94,23 @@ export default function AdminDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex gap-4 mb-6 border-b border-gray-200">
+        <div className="flex gap-1 mb-6 border-b border-border">
           <button
             onClick={() => setTab("calls")}
-            className={`px-4 py-2 font-medium ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               tab === "calls"
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-600 hover:text-gray-900"
+                ? "text-foreground border-foreground"
+                : "text-muted-foreground border-transparent hover:text-foreground"
             }`}
           >
             All Calls ({calls.length})
           </button>
           <button
             onClick={() => setTab("agents")}
-            className={`px-4 py-2 font-medium ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               tab === "agents"
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-600 hover:text-gray-900"
+                ? "text-foreground border-foreground"
+                : "text-muted-foreground border-transparent hover:text-foreground"
             }`}
           >
             Manage Agents ({agents.length})
@@ -110,32 +118,32 @@ export default function AdminDashboard() {
         </div>
 
         {tab === "calls" && (
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-muted border-b border-border">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Agent</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Lead</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Duration</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Disposition</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Recording</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Agent</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Lead</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Disposition</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Recording</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {calls.map((call) => (
-                  <tr key={call.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-900">{call.agent_email}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{call.lead_id.slice(0, 8)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                  <tr key={call.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-6 py-4 text-sm text-foreground">{call.agent_email}</td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground font-mono">{call.lead_id.slice(0, 8)}</td>
+                    <td className="px-6 py-4 text-sm text-foreground">
                       {call.duration_seconds ? `${call.duration_seconds}s` : "-"}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${
+                        className={`px-2 py-0.5 rounded-md text-xs font-medium ${
                           call.disposition === "connected"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
+                            ? "bg-accent-green/15 text-accent-green-foreground"
+                            : "bg-muted text-muted-foreground"
                         }`}
                       >
                         {call.disposition || "-"}
@@ -147,15 +155,15 @@ export default function AdminDashboard() {
                           href={call.recording_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
+                          className="text-foreground underline underline-offset-2 hover:no-underline"
                         >
                           Listen
                         </a>
                       ) : (
-                        "-"
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
                       {new Date(call.created_at).toLocaleDateString()}
                     </td>
                   </tr>
@@ -217,16 +225,16 @@ function AgentManagement({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Add New Agent</h2>
-        <form onSubmit={handleAddAgent} className="space-y-4">
+      <div className="bg-card border border-border rounded-xl p-6">
+        <h2 className="text-sm font-semibold text-foreground mb-4">Add New Agent</h2>
+        <form onSubmit={handleAddAgent} className="space-y-3">
           <input
             type="email"
             placeholder="Agent Email"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
           />
           <input
             type="text"
@@ -234,7 +242,7 @@ function AgentManagement({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
           />
           <input
             type="tel"
@@ -242,41 +250,41 @@ function AgentManagement({
             value={newPhone}
             onChange={(e) => setNewPhone(e.target.value)}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
           />
-          {error && <div className="text-sm text-red-600">{error}</div>}
+          {error && <div className="text-sm text-destructive">{error}</div>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition"
+            className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2.5 px-4 rounded-lg transition-all active:translate-y-px"
           >
             {loading ? "Adding..." : "Add Agent"}
           </button>
         </form>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-muted border-b border-border">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Name</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Email</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Phone</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Phone</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-border">
             {agents.map((agent) => (
-              <tr key={agent.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm text-gray-900">{agent.display_name}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{agent.email}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{agent.phone_number}</td>
+              <tr key={agent.id} className="hover:bg-muted/50 transition-colors">
+                <td className="px-6 py-4 text-sm text-foreground">{agent.display_name}</td>
+                <td className="px-6 py-4 text-sm text-muted-foreground">{agent.email}</td>
+                <td className="px-6 py-4 text-sm text-muted-foreground font-mono">{agent.phone_number}</td>
                 <td className="px-6 py-4 text-sm">
                   <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${
+                    className={`px-2 py-0.5 rounded-md text-xs font-medium ${
                       agent.is_active
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-100 text-gray-800"
+                        ? "bg-accent-green/15 text-accent-green-foreground"
+                        : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {agent.is_active ? "Active" : "Inactive"}

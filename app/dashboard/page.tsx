@@ -39,59 +39,57 @@ export default function DashboardSelector() {
   }, [router]);
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background dotted-bg flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-12">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome, Admin!</h1>
-            <p className="text-gray-600">{user?.email}</p>
+        <div className="bg-card border border-border rounded-2xl shadow-sm p-8 md:p-12">
+          <div className="text-center mb-10">
+            <h1 className="text-2xl font-semibold text-foreground mb-1 tracking-tight">Welcome, Admin</h1>
+            <p className="text-muted-foreground text-sm">{user?.email}</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Admin Dashboard Card */}
             <button
               onClick={() => router.push("/admin")}
-              className="group p-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl hover:shadow-lg transition transform hover:scale-105 text-left"
+              className="group p-6 bg-card border border-border rounded-xl hover:border-foreground/20 hover:shadow-sm transition-all text-left"
             >
-              <div className="text-5xl mb-4">📊</div>
-              <h2 className="text-2xl font-bold text-white mb-2">Admin Dashboard</h2>
-              <p className="text-blue-100 mb-4">
+              <h2 className="text-lg font-semibold text-foreground mb-1.5">Admin Dashboard</h2>
+              <p className="text-sm text-muted-foreground mb-5">
                 Manage agents, view all calls, and track team performance
               </p>
-              <div className="flex items-center text-white group-hover:translate-x-2 transition">
-                <span className="font-semibold">Go to Admin</span>
-                <span className="ml-2">→</span>
+              <div className="flex items-center text-foreground text-sm font-medium group-hover:translate-x-1 transition-transform">
+                <span>Go to Admin</span>
+                <span className="ml-1.5">→</span>
               </div>
             </button>
 
             {/* Dialer Card */}
             <button
               onClick={() => router.push("/dialer")}
-              className="group p-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl hover:shadow-lg transition transform hover:scale-105 text-left"
+              className="group p-6 bg-primary border border-primary rounded-xl hover:bg-primary/90 hover:shadow-sm transition-all text-left"
             >
-              <div className="text-5xl mb-4">📞</div>
-              <h2 className="text-2xl font-bold text-white mb-2">Make Calls</h2>
-              <p className="text-emerald-100 mb-4">
+              <h2 className="text-lg font-semibold text-primary-foreground mb-1.5">Make Calls</h2>
+              <p className="text-sm text-primary-foreground/70 mb-5">
                 Access the dialer and make calls to leads like an agent
               </p>
-              <div className="flex items-center text-white group-hover:translate-x-2 transition">
-                <span className="font-semibold">Go to Dialer</span>
-                <span className="ml-2">→</span>
+              <div className="flex items-center text-primary-foreground text-sm font-medium group-hover:translate-x-1 transition-transform">
+                <span>Go to Dialer</span>
+                <span className="ml-1.5">→</span>
               </div>
             </button>
           </div>
 
-          <div className="mt-8 pt-8 border-t border-gray-200">
+          <div className="mt-8 pt-6 border-t border-border">
             <button
               onClick={async () => {
                 await supabaseAuth.auth.signOut();
                 router.push("/auth/login");
               }}
-              className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-900 font-medium transition"
+              className="w-full px-4 py-2 text-sm text-muted-foreground hover:text-foreground font-medium transition-colors"
             >
               Sign Out
             </button>

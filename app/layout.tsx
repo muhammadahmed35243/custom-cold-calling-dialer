@@ -1,6 +1,19 @@
 import type { Metadata } from "next";
+import { Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+
+const instrumentSans = Instrument_Sans({
+  subsets: ["latin"],
+  variable: "--font-instrument-sans",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Cold-Calling Dialer",
@@ -15,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-50">
+    <html lang="en" className={`${instrumentSans.variable} ${jetbrainsMono.variable}`}>
+      <body className="bg-background text-foreground font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

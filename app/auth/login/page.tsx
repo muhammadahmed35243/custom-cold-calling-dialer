@@ -42,23 +42,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+    <div className="min-h-screen flex items-center justify-center bg-background dotted-bg">
+      <div className="bg-card border border-border rounded-2xl shadow-sm p-8 max-w-md w-full">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cold Dialer</h1>
-          <p className="text-gray-600">Sign in to access the dialer</p>
+          <h1 className="text-2xl font-semibold text-foreground mb-1 tracking-tight">Cold Dialer</h1>
+          <p className="text-muted-foreground text-sm">Sign in to access the dialer</p>
         </div>
 
         <div className="mb-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-gray-700">
-              <strong>⚠️ Privacy Notice:</strong> Your calls will be recorded for quality assurance and training purposes.
+          <div className="bg-muted border border-border rounded-lg p-4">
+            <p className="text-sm text-foreground">
+              <strong className="font-medium">Privacy Notice:</strong> Your calls will be recorded for quality assurance and training purposes.
             </p>
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
             {error}
           </div>
         )}
@@ -66,16 +66,19 @@ export default function LoginPage() {
         <button
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2"
+          className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2.5 px-4 rounded-lg transition-all active:translate-y-px flex items-center justify-center gap-2.5"
         >
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.449-.356 4.68-1.494 6.203-1.019 1.324-2.523 1.899-4.14 1.899-2.112 0-3.965-1.589-3.965-3.667 0-1.335.582-2.458 1.679-3.282.551-.643 1.31-1.571 2.157-2.692.849-1.12 1.564-1.845 2.139-2.187 1.111-.656 2.157-.656 3.028 0 .75.434 1.393 1.148 1.878 2.266.473-.575.803-1.159.994-1.767.16-.448.243-.896.243-1.343 0-.67-.106-1.315-.328-1.934a2.678 2.678 0 0 0-.7-1.229 2.678 2.678 0 0 0-1.229-.7 2.678 2.678 0 0 0-1.934.328 5.356 5.356 0 0 0-1.526 1.09 10.712 10.712 0 0 0-1.526 1.9 15.068 15.068 0 0 0-1.228 2.474 19.424 19.424 0 0 0-.75 3.198 23.78 23.78 0 0 0-.2 4.078c0 1.67.114 3.254.328 4.73a29.136 29.136 0 0 0 1.074 4.76" />
+          <svg className="w-4 h-4" viewBox="0 0 48 48">
+            <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+            <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+            <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+            <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
           </svg>
           {loading ? "Signing in..." : "Sign in with Google"}
         </button>
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-500 text-center">
+        <div className="mt-6 pt-6 border-t border-border">
+          <p className="text-xs text-muted-foreground text-center">
             Only authorized agents can access this application.
           </p>
         </div>

@@ -13,7 +13,7 @@ export default function Home() {
     const checkAuth = async () => {
       const { data: { user } } = await supabaseAuth.auth.getUser();
       if (user?.email) {
-        router.push("/admin");
+        router.push("/dashboard");
       } else {
         router.push("/auth/login");
       }
@@ -22,5 +22,5 @@ export default function Home() {
     checkAuth();
   }, [router]);
 
-  return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  return <div className="flex items-center justify-center min-h-screen text-muted-foreground text-sm">Loading...</div>;
 }

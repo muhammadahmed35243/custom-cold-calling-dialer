@@ -247,19 +247,19 @@ export default function DialerPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
+    <div className="min-h-screen bg-background">
+      <header className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Cold Dialer</h1>
+          <h1 className="text-lg font-semibold text-foreground">Cold Dialer</h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.email}</span>
+            <span className="text-sm text-muted-foreground">{user?.email}</span>
             <button
               onClick={handleSignOut}
-              className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
+              className="px-3 py-1.5 text-sm bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors"
             >
               Sign Out
             </button>
@@ -269,12 +269,12 @@ export default function DialerPage() {
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Upload Options */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-8 border border-gray-200">
+        <div className="bg-card border border-border rounded-xl p-6 mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Add Leads</h2>
+            <h2 className="text-sm font-semibold text-foreground">Add Leads</h2>
             <button
               onClick={() => setShowAddLeadForm(!showAddLeadForm)}
-              className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
+              className="text-sm px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
             >
               {showAddLeadForm ? "Hide" : "Add Manually"}
             </button>
@@ -287,34 +287,34 @@ export default function DialerPage() {
                 placeholder="Name *"
                 value={addLeadForm.name}
                 onChange={(e) => setAddLeadForm({ ...addLeadForm, name: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
               />
               <input
                 type="tel"
                 placeholder="Phone Number * (e.g., +923001234567)"
                 value={addLeadForm.phone}
                 onChange={(e) => setAddLeadForm({ ...addLeadForm, phone: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
               />
               <input
                 type="text"
                 placeholder="Company (optional)"
                 value={addLeadForm.company}
                 onChange={(e) => setAddLeadForm({ ...addLeadForm, company: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
               />
               <textarea
                 placeholder="Notes (optional)"
                 value={addLeadForm.notes}
                 onChange={(e) => setAddLeadForm({ ...addLeadForm, notes: e.target.value })}
                 rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
               />
               <div className="flex gap-2">
                 <button
                   onClick={handleAddLead}
                   disabled={isAddingLead || !addLeadForm.name || !addLeadForm.phone}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition"
+                  className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2 px-4 rounded-lg transition-all active:translate-y-px"
                 >
                   {isAddingLead ? "Adding..." : "Add Lead"}
                 </button>
@@ -324,13 +324,13 @@ export default function DialerPage() {
                     setAddLeadForm({ name: "", phone: "", company: "", notes: "" });
                     setAddLeadStatus("");
                   }}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-900 font-semibold py-2 px-4 rounded-lg transition"
+                  className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2 px-4 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
               </div>
               {addLeadStatus && (
-                <div className={`text-sm p-2 rounded ${addLeadStatus.startsWith("✓") ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                <div className={`text-sm p-2.5 rounded-lg ${addLeadStatus.startsWith("✓") ? "bg-accent-green/15 text-accent-green-foreground" : "bg-destructive/10 text-destructive"}`}>
                   {addLeadStatus}
                 </div>
               )}
@@ -338,48 +338,48 @@ export default function DialerPage() {
           ) : (
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Upload CSV</h3>
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Upload CSV</h3>
                 <div className="flex items-center gap-4">
                   <input
                     type="file"
                     accept=".csv"
                     onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
                     disabled={isUploading}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-secondary file:text-secondary-foreground file:text-sm file:font-medium hover:file:bg-secondary/80 file:cursor-pointer"
                   />
                   {uploadStatus && (
-                    <span className={`text-sm ${uploadStatus.startsWith("✓") ? "text-green-600" : "text-red-600"}`}>
+                    <span className={`text-sm ${uploadStatus.startsWith("✓") ? "text-accent-green-foreground" : "text-destructive"}`}>
                       {uploadStatus}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-2">CSV format: name, phone, company (optional), notes (optional)</p>
+                <p className="text-xs text-muted-foreground mt-2">CSV format: name, phone, company (optional), notes (optional)</p>
               </div>
             </div>
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Queue */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                <h3 className="font-semibold text-gray-900">Pending Leads ({leads.length})</h3>
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="bg-muted px-6 py-3.5 border-b border-border">
+                <h3 className="text-sm font-semibold text-foreground">Pending Leads ({leads.length})</h3>
               </div>
               <div className="max-h-96 overflow-y-auto">
                 {leads.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500">No pending leads</div>
+                  <div className="p-6 text-center text-sm text-muted-foreground">No pending leads</div>
                 ) : (
                   leads.map((lead) => (
                     <button
                       key={lead.id}
                       onClick={() => setCurrentLead(lead)}
-                      className={`w-full text-left px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition ${
-                        currentLead?.id === lead.id ? "bg-blue-50 border-l-4 border-l-blue-500" : ""
+                      className={`w-full text-left px-6 py-3.5 border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors ${
+                        currentLead?.id === lead.id ? "bg-muted border-l-2 border-l-foreground" : ""
                       }`}
                     >
-                      <div className="font-medium text-gray-900">{lead.name}</div>
-                      <div className="text-sm text-gray-600">{lead.phone}</div>
+                      <div className="text-sm font-medium text-foreground">{lead.name}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{lead.phone}</div>
                     </button>
                   ))
                 )}
@@ -390,20 +390,20 @@ export default function DialerPage() {
           {/* Call Controls */}
           <div className="lg:col-span-2 space-y-6">
             {activeCall ? (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Active Call</h3>
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-sm font-semibold text-foreground mb-4">Active Call</h3>
                 <div className="mb-4">
-                  <div className="text-sm text-gray-600 mb-2">Status: {callStatus}</div>
+                  <div className="text-sm text-muted-foreground mb-2">Status: <span className="text-foreground font-medium">{callStatus}</span></div>
                 </div>
 
                 {["completed", "no_answer", "failed"].includes(callStatus) && (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Disposition</label>
+                      <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Disposition</label>
                       <select
                         value={disposition}
                         onChange={(e) => setDisposition(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
                       >
                         <option value="">Select outcome...</option>
                         <option value="connected">Connected</option>
@@ -415,12 +415,12 @@ export default function DialerPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                      <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Notes</label>
                       <textarea
                         value={dispositionNotes}
                         onChange={(e) => setDispositionNotes(e.target.value)}
                         placeholder="Add any notes..."
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
                         rows={3}
                       />
                     </div>
@@ -428,66 +428,66 @@ export default function DialerPage() {
                     <button
                       onClick={handleDisposition}
                       disabled={!disposition}
-                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-semibold py-2 px-4 rounded-lg transition"
+                      className="w-full bg-accent-green hover:bg-accent-green/90 disabled:opacity-40 text-accent-green-foreground font-medium py-2.5 px-4 rounded-lg transition-all active:translate-y-px"
                     >
-                      Save & Next
+                      Save &amp; Next
                     </button>
                   </div>
                 )}
               </div>
             ) : currentLead ? (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Lead</h3>
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-sm font-semibold text-foreground mb-4">Current Lead</h3>
                 <div className="space-y-2 mb-6">
                   <div>
-                    <span className="text-sm text-gray-600">Name: </span>
-                    <span className="font-medium text-gray-900">{currentLead.name}</span>
+                    <span className="text-sm text-muted-foreground">Name: </span>
+                    <span className="text-sm font-medium text-foreground">{currentLead.name}</span>
                   </div>
                   <div>
-                    <span className="text-sm text-gray-600">Phone: </span>
-                    <span className="font-medium text-gray-900">{currentLead.phone}</span>
+                    <span className="text-sm text-muted-foreground">Phone: </span>
+                    <span className="text-sm font-medium text-foreground font-mono">{currentLead.phone}</span>
                   </div>
                   {currentLead.company && (
                     <div>
-                      <span className="text-sm text-gray-600">Company: </span>
-                      <span className="font-medium text-gray-900">{currentLead.company}</span>
+                      <span className="text-sm text-muted-foreground">Company: </span>
+                      <span className="text-sm font-medium text-foreground">{currentLead.company}</span>
                     </div>
                   )}
                   {currentLead.notes && (
                     <div>
-                      <span className="text-sm text-gray-600">Notes: </span>
-                      <span className="text-gray-900">{currentLead.notes}</span>
+                      <span className="text-sm text-muted-foreground">Notes: </span>
+                      <span className="text-sm text-foreground">{currentLead.notes}</span>
                     </div>
                   )}
                 </div>
 
                 <button
                   onClick={() => handleCall(currentLead)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-all active:translate-y-px"
                 >
-                  📞 Call
+                  Call
                 </button>
               </div>
             ) : (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center text-gray-500">
+              <div className="bg-card border border-border rounded-xl p-6 text-center text-sm text-muted-foreground">
                 Upload leads to get started
               </div>
             )}
 
             {/* Call History */}
             {calls.length > 0 && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Call History</h3>
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-sm font-semibold text-foreground mb-4">Your Call History</h3>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {calls.slice(0, 10).map((call) => (
-                    <div key={call.id} className="p-3 bg-gray-50 rounded text-sm">
+                    <div key={call.id} className="p-3 bg-muted rounded-lg text-sm">
                       <div className="flex justify-between">
-                        <span className="font-medium">{call.disposition || "pending"}</span>
-                        <span className="text-gray-600">
+                        <span className="font-medium text-foreground">{call.disposition || "pending"}</span>
+                        <span className="text-muted-foreground">
                           {call.duration_seconds ? `${call.duration_seconds}s` : "-"}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-muted-foreground mt-0.5">
                         {new Date(call.created_at).toLocaleString()}
                       </div>
                     </div>
