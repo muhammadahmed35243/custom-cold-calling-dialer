@@ -35,10 +35,10 @@ export async function POST(req: NextRequest) {
       return new NextResponse("Call record not found", { status: 404 });
     }
 
-    // Download recording from Telnyx. Unlike Twilio, Telnyx's RecordingUrl is
-    // already a complete, correctly-formatted URL -- no extension to append.
-    console.log("Telnyx recording URL:", recordingUrl);
-    const recordingData = await downloadFile(recordingUrl, `Bearer ${process.env.TELNYX_API_KEY}`);
+    // Telnyx's RecordingUrl is a pre-signed S3 URL (auth baked into the query
+    // string via X-Amz-Signature) -- it's self-authenticating and rejects an
+    // additional Authorization header, unlike Telnyx's own API endpoints.
+    const recordingData = await downloadFile(recordingUrl);
 
     // Upload to Supabase Storage
     const now = new Date();
