@@ -3,11 +3,14 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth } from "@/lib/supabase";
+import { useAppReady } from "@/components/AppReadyContext";
+import { BrandedLoader } from "@/components/BrandedLoader";
 
 export const dynamic = "force-dynamic";
 
 export default function Home() {
   const router = useRouter();
+  const { setReady } = useAppReady();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -17,10 +20,11 @@ export default function Home() {
       } else {
         router.push("/auth/login");
       }
+      setReady();
     };
 
     checkAuth();
-  }, [router]);
+  }, [router, setReady]);
 
-  return <div className="flex items-center justify-center min-h-screen text-muted-foreground text-sm">Loading...</div>;
+  return <BrandedLoader />;
 }

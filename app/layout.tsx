@@ -3,6 +3,7 @@ import { Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { SplashScreen } from "@/components/SplashScreen";
+import { AppReadyProvider } from "@/components/AppReadyContext";
 
 const instrumentSans = Instrument_Sans({
   subsets: ["latin"],
@@ -35,8 +36,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${instrumentSans.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-background text-foreground font-sans antialiased">
-        <SplashScreen />
-        <Providers>{children}</Providers>
+        <AppReadyProvider>
+          <SplashScreen />
+          <Providers>{children}</Providers>
+        </AppReadyProvider>
       </body>
     </html>
   );

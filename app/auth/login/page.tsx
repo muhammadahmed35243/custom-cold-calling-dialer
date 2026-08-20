@@ -4,15 +4,22 @@ import { supabaseAuth } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
+import { useAppReady } from "@/components/AppReadyContext";
 
 export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setReady } = useAppReady();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // The form itself renders immediately, with no loading gate -- ready as
+    // soon as this mounts, independent of the background already-logged-in
+    // check below.
+    setReady();
+
     // Check if already logged in
     const checkAuth = async () => {
       const { data: { user } } = await supabaseAuth.auth.getUser();
@@ -21,7 +28,7 @@ export default function LoginPage() {
       }
     };
     checkAuth();
-  }, [router]);
+  }, [router, setReady]);
 
   const handleGoogleSignIn = async () => {
     try {

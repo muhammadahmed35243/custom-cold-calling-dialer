@@ -9,11 +9,14 @@ import { Avatar } from "@/components/Avatar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StatRow } from "@/components/StatRow";
 import { PencilIcon, ClockIcon, CheckIcon, XIcon, MailIcon } from "@/components/icons";
+import { useAppReady } from "@/components/AppReadyContext";
+import { BrandedLoader } from "@/components/BrandedLoader";
 
 export const dynamic = "force-dynamic";
 
 export default function DialerPage() {
   const router = useRouter();
+  const { setReady } = useAppReady();
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -57,6 +60,7 @@ export default function DialerPage() {
 
       if (!authUser?.email) {
         router.push("/auth/login");
+        setReady();
         return;
       }
 
@@ -69,6 +73,7 @@ export default function DialerPage() {
 
       if (!agent || !agent.is_active) {
         router.push("/auth/login?error=unauthorized");
+        setReady();
         return;
       }
 
@@ -77,10 +82,11 @@ export default function DialerPage() {
       setIsAdmin(agent.role === "admin");
       loadLeadsAndCalls();
       setLoading(false);
+      setReady();
     };
 
     checkAuth();
-  }, [router]);
+  }, [router, setReady]);
 
   const loadLeadsAndCalls = async () => {
     // Load pending leads
@@ -646,7 +652,7 @@ export default function DialerPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
+    return <BrandedLoader />;
   }
 
   return (

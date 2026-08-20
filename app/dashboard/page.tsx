@@ -4,11 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import { JetztLogo } from "@/components/Logo";
+import { useAppReady } from "@/components/AppReadyContext";
+import { BrandedLoader } from "@/components/BrandedLoader";
 
 export const dynamic = "force-dynamic";
 
 export default function DashboardSelector() {
   const router = useRouter();
+  const { setReady } = useAppReady();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,6 +21,7 @@ export default function DashboardSelector() {
 
       if (!authUser?.email) {
         router.push("/auth/login");
+        setReady();
         return;
       }
 
@@ -29,18 +33,20 @@ export default function DashboardSelector() {
 
       if (!agent || agent.role !== "admin") {
         router.push("/dialer");
+        setReady();
         return;
       }
 
       setUser(authUser);
       setLoading(false);
+      setReady();
     };
 
     checkAuth();
-  }, [router]);
+  }, [router, setReady]);
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
+    return <BrandedLoader />;
   }
 
   return (

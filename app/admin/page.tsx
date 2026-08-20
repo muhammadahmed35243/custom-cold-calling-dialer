@@ -7,11 +7,14 @@ import type { Agent, Call } from "@/lib/supabase";
 import { AppHeader } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useAppReady } from "@/components/AppReadyContext";
+import { BrandedLoader } from "@/components/BrandedLoader";
 
 export const dynamic = "force-dynamic";
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const { setReady } = useAppReady();
   const [user, setUser] = useState<any>(null);
   const [calls, setCalls] = useState<Call[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -24,6 +27,7 @@ export default function AdminDashboard() {
 
       if (!authUser?.email) {
         router.push("/auth/login");
+        setReady();
         return;
       }
 
@@ -36,6 +40,7 @@ export default function AdminDashboard() {
 
       if (!agent || agent.role !== "admin") {
         router.push("/dialer");
+        setReady();
         return;
       }
 
@@ -57,10 +62,11 @@ export default function AdminDashboard() {
 
       setAgents(agentsData || []);
       setLoading(false);
+      setReady();
     };
 
     checkAuth();
-  }, [router]);
+  }, [router, setReady]);
 
   const handleSignOut = async () => {
     await supabaseAuth.auth.signOut();
@@ -68,7 +74,7 @@ export default function AdminDashboard() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
+    return <BrandedLoader />;
   }
 
   return (

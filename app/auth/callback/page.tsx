@@ -3,11 +3,14 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
+import { useAppReady } from "@/components/AppReadyContext";
+import { BrandedLoader } from "@/components/BrandedLoader";
 
 export const dynamic = "force-dynamic";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const { setReady } = useAppReady();
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -36,17 +39,12 @@ export default function AuthCallbackPage() {
           router.push("/auth/login?error=unauthorized");
         }
       }
+
+      setReady();
     };
 
     handleCallback();
-  }, [router]);
+  }, [router, setReady]);
 
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground mx-auto mb-4"></div>
-        <p className="text-muted-foreground text-sm">Authenticating...</p>
-      </div>
-    </div>
-  );
+  return <BrandedLoader />;
 }

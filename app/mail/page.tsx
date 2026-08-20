@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import { AppHeader } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
+import { useAppReady } from "@/components/AppReadyContext";
+import { BrandedLoader } from "@/components/BrandedLoader";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,7 @@ const FOLDERS = ["Inbox", "Sent", "Drafts"] as const;
 
 export default function MailPage() {
   const router = useRouter();
+  const { setReady } = useAppReady();
   const [user, setUser] = useState<any>(null);
   const [agentInfo, setAgentInfo] = useState<{ role: string; alias_email: string | null; display_name: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,6 +59,7 @@ export default function MailPage() {
 
       if (!authUser?.email) {
         router.push("/auth/login");
+        setReady();
         return;
       }
 
@@ -67,16 +71,18 @@ export default function MailPage() {
 
       if (!agent || !agent.is_active) {
         router.push("/auth/login?error=unauthorized");
+        setReady();
         return;
       }
 
       setUser(authUser);
       setAgentInfo({ role: agent.role, alias_email: agent.alias_email, display_name: agent.display_name });
       setLoading(false);
+      setReady();
     };
 
     checkAuth();
-  }, [router]);
+  }, [router, setReady]);
 
   const authedFetch = async (url: string, options: RequestInit = {}) => {
     const { data: { session } } = await supabaseAuth.auth.getSession();
@@ -178,7 +184,7 @@ export default function MailPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
+    return <BrandedLoader />;
   }
 
   const hasMailbox = agentInfo?.role === "admin" || !!agentInfo?.alias_email;
