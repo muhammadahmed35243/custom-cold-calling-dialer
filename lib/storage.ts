@@ -4,7 +4,10 @@ export async function downloadFile(url: string, authHeader?: string): Promise<Bu
   const response = await fetch(url, {
     headers: authHeader ? { Authorization: authHeader } : undefined,
   });
-  if (!response.ok) throw new Error(`Failed to download file: ${response.statusText}`);
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`Failed to download file: ${response.status} ${response.statusText} - ${body.slice(0, 500)}`);
+  }
   return Buffer.from(await response.arrayBuffer());
 }
 
