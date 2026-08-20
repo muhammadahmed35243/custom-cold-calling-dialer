@@ -3,6 +3,28 @@ import { supabaseServiceClient } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/api-auth";
 import { initiateCall } from "@/lib/telnyx";
 
+export async function GET(req: NextRequest) {
+  const { user } = await getAuthenticatedUser(req);
+  if (!user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Joined via service role: the leads RLS policy only allows reading
+  // status='pending' rows, which would silently drop the name/phone for
+  // every already-called lead if this ran through the client's anon key.
+  const { data, error } = await supabaseServiceClient
+    .from("calls")
+    .select("*, leads(id, name, phone)")
+    .eq("agent_email", user.email)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ calls: data });
+}
+
 export async function POST(req: NextRequest) {
   const { user } = await getAuthenticatedUser(req);
   if (!user?.email) {

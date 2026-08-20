@@ -1,12 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import type { Lead, Call } from "@/lib/supabase";
 import { Logo } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
+
+function PencilIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 3.5a2.121 2.121 0 0 1 3 3L7 16l-4 1 1-4 9.5-9.5Z" />
+    </svg>
+  );
+}
+
+function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>
+      <circle cx="10" cy="10" r="7" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6v4l2.5 2.5" />
+    </svg>
+  );
+}
+
+function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 10.5 8 14.5 16 5.5" />
+    </svg>
+  );
+}
+
+function XIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 5l10 10M15 5 5 15" />
+    </svg>
+  );
+}
 
 export default function DialerPage() {
   const router = useRouter();
@@ -18,8 +51,9 @@ export default function DialerPage() {
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [callStatus, setCallStatus] = useState<string>("");
-  const [disposition, setDisposition] = useState<string>("");
-  const [dispositionNotes, setDispositionNotes] = useState("");
+  const [editingCallId, setEditingCallId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState({ disposition: "", notes: "", callbackAt: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showAddLeadForm, setShowAddLeadForm] = useState(false);
   const [addLeadForm, setAddLeadForm] = useState({ name: "", phone: "", company: "", notes: "" });
@@ -48,14 +82,14 @@ export default function DialerPage() {
       }
 
       setUser(authUser);
-      loadLeadsAndCalls(authUser.email);
+      loadLeadsAndCalls();
       setLoading(false);
     };
 
     checkAuth();
   }, [router]);
 
-  const loadLeadsAndCalls = async (agentEmail: string) => {
+  const loadLeadsAndCalls = async () => {
     // Load pending leads
     const { data: leadsData } = await supabaseClient
       .from("leads")
@@ -66,14 +100,20 @@ export default function DialerPage() {
     setLeads(leadsData || []);
     if (leadsData && leadsData.length > 0) setCurrentLead(leadsData[0]);
 
-    // Load agent's calls
-    const { data: callsData } = await supabaseClient
-      .from("calls")
-      .select("*")
-      .eq("agent_email", agentEmail)
-      .order("created_at", { ascending: false });
+    // Load agent's calls (joined with lead name/phone -- routed through a
+    // server API because the leads RLS policy only allows reading
+    // status='pending' rows via the client, which would hide the lead info
+    // for every already-called row in a direct client-side join)
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+    if (!session) return;
 
-    setCalls(callsData || []);
+    const response = await fetch("/api/calls", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (response.ok) {
+      const { calls: callsData } = await response.json();
+      setCalls(callsData || []);
+    }
   };
 
   const handleFileUpload = async (file: File) => {
@@ -101,7 +141,7 @@ export default function DialerPage() {
       const result = await response.json();
       if (response.ok) {
         setUploadStatus(`✓ ${result.imported} leads imported${result.errors?.length ? `, ${result.errors.length} skipped` : ""}`);
-        loadLeadsAndCalls(user.email);
+        loadLeadsAndCalls();
       } else {
         setUploadStatus(`✗ Upload failed: ${result.error}`);
       }
@@ -157,17 +197,44 @@ export default function DialerPage() {
       });
       const data = await response.json();
 
-      setActiveCall(data.call);
-      setCallStatus(data.status);
-
       if (["completed", "no_answer", "failed"].includes(data.status)) {
         clearInterval(interval);
+        setActiveCall(null);
+        setCallStatus("");
+        await loadLeadsAndCalls();
+        startEdit(data.call);
+        return;
       }
+
+      setActiveCall(data.call);
+      setCallStatus(data.status);
     }, 2000);
   };
 
-  const handleDisposition = async () => {
-    if (!activeCall || !disposition) return;
+  const toDatetimeLocal = (iso: string | null) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const startEdit = (call: Call) => {
+    setEditingCallId(call.id);
+    setEditDraft({
+      disposition: call.disposition || "",
+      notes: call.notes || "",
+      callbackAt: toDatetimeLocal(call.callback_at),
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingCallId(null);
+    setEditDraft({ disposition: "", notes: "", callbackAt: "" });
+  };
+
+  const saveEdit = async (callId: string) => {
+    if (!editDraft.disposition || !user) return;
+    setSavingEdit(true);
 
     try {
       const { data: { session } } = await supabaseAuth.auth.getSession();
@@ -176,25 +243,67 @@ export default function DialerPage() {
         return;
       }
 
-      const response = await fetch(`/api/leads/${activeCall.lead_id}/disposition`, {
+      const response = await fetch(`/api/calls/${callId}/disposition`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ disposition, notes: dispositionNotes }),
+        body: JSON.stringify({
+          disposition: editDraft.disposition,
+          notes: editDraft.notes,
+          callbackAt: editDraft.callbackAt ? new Date(editDraft.callbackAt).toISOString() : null,
+        }),
       });
 
       if (response.ok) {
-        setActiveCall(null);
-        setCallStatus("");
-        setDisposition("");
-        setDispositionNotes("");
-        loadLeadsAndCalls(user.email);
+        cancelEdit();
+        await loadLeadsAndCalls();
       }
     } catch (error) {
       setCallStatus(`Error: ${error}`);
+    } finally {
+      setSavingEdit(false);
     }
+  };
+
+  // Most recent call per lead, where that call's outcome is still "callback"
+  // -- since `calls` is sorted newest-first, the first hit per lead_id wins,
+  // so a lead that was called back and re-dispositioned since naturally
+  // drops off this list without a separate query.
+  const callbackEntries = useMemo(() => {
+    const seen = new Set<string>();
+    const entries: { leadId: string; name: string; phone: string; callbackAt: string | null }[] = [];
+    for (const call of calls) {
+      if (seen.has(call.lead_id)) continue;
+      seen.add(call.lead_id);
+      if (call.disposition === "callback" && call.leads) {
+        entries.push({
+          leadId: call.lead_id,
+          name: call.leads.name,
+          phone: call.leads.phone,
+          callbackAt: call.callback_at,
+        });
+      }
+    }
+    return entries;
+  }, [calls]);
+
+  const handleCallbackNow = (entry: { leadId: string; name: string; phone: string }) => {
+    const leadStub: Lead = {
+      id: entry.leadId,
+      name: entry.name,
+      phone: entry.phone,
+      company: null,
+      notes: null,
+      status: "callback",
+      assigned_agent: null,
+      uploaded_batch_id: null,
+      created_at: "",
+      updated_at: "",
+    };
+    setCurrentLead(leadStub);
+    handleCall(leadStub);
   };
 
   const handleAddLead = async () => {
@@ -230,7 +339,7 @@ export default function DialerPage() {
         setTimeout(() => {
           setShowAddLeadForm(false);
           setAddLeadStatus("");
-          loadLeadsAndCalls(user.email);
+          loadLeadsAndCalls();
         }, 1500);
       } else {
         setAddLeadStatus(`✗ ${result.error}`);
@@ -391,50 +500,9 @@ export default function DialerPage() {
           {/* Call Controls */}
           <div className="lg:col-span-2 space-y-6">
             {activeCall ? (
-              <div className="bg-card border border-border rounded-xl p-6">
-                <h3 className="text-sm font-semibold text-foreground mb-4">Active Call</h3>
-                <div className="mb-4">
-                  <div className="text-sm text-muted-foreground mb-2">Status: <span className="text-foreground font-medium">{callStatus}</span></div>
-                </div>
-
-                {["completed", "no_answer", "failed"].includes(callStatus) && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Disposition</label>
-                      <select
-                        value={disposition}
-                        onChange={(e) => setDisposition(e.target.value)}
-                        className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
-                      >
-                        <option value="">Select outcome...</option>
-                        <option value="connected">Connected</option>
-                        <option value="voicemail">Voicemail</option>
-                        <option value="no_answer">No Answer</option>
-                        <option value="busy">Busy</option>
-                        <option value="callback">Callback</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Notes</label>
-                      <textarea
-                        value={dispositionNotes}
-                        onChange={(e) => setDispositionNotes(e.target.value)}
-                        placeholder="Add any notes..."
-                        className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
-                        rows={3}
-                      />
-                    </div>
-
-                    <button
-                      onClick={handleDisposition}
-                      disabled={!disposition}
-                      className="w-full bg-accent-green hover:bg-accent-green/90 disabled:opacity-40 text-accent-green-foreground font-medium py-2.5 px-4 rounded-lg transition-all active:translate-y-px"
-                    >
-                      Save &amp; Next
-                    </button>
-                  </div>
-                )}
+              <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Calling {currentLead?.name || "lead"}...</span>
+                <span className="text-sm font-medium text-foreground">{callStatus}</span>
               </div>
             ) : currentLead ? (
               <div className="bg-card border border-border rounded-xl p-6">
@@ -475,27 +543,191 @@ export default function DialerPage() {
               </div>
             )}
 
-            {/* Call History */}
-            {calls.length > 0 && (
-              <div className="bg-card border border-border rounded-xl p-6">
-                <h3 className="text-sm font-semibold text-foreground mb-4">Your Call History</h3>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {calls.slice(0, 10).map((call) => (
-                    <div key={call.id} className="p-3 bg-muted rounded-lg text-sm">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-foreground">{call.disposition || "pending"}</span>
-                        <span className="text-muted-foreground">
-                          {call.duration_seconds ? `${call.duration_seconds}s` : "-"}
-                        </span>
+            {/* Callbacks */}
+            {callbackEntries.length > 0 && (
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="bg-muted px-6 py-3.5 border-b border-border">
+                  <h3 className="text-sm font-semibold text-foreground">Callbacks ({callbackEntries.length})</h3>
+                </div>
+                <div className="divide-y divide-border">
+                  {callbackEntries.map((entry) => (
+                    <div key={entry.leadId} className="px-6 py-3.5 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium text-foreground">{entry.name}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{entry.phone}</div>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {new Date(call.created_at).toLocaleString()}
+                      <div className="flex items-center gap-3">
+                        {entry.callbackAt && (
+                          <span className="text-xs text-muted-foreground">{new Date(entry.callbackAt).toLocaleString()}</span>
+                        )}
+                        <button
+                          onClick={() => handleCallbackNow(entry)}
+                          disabled={!!activeCall}
+                          className="text-sm px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-lg transition-colors"
+                        >
+                          Call Now
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Call History */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="bg-muted px-6 py-3.5 border-b border-border">
+                <h3 className="text-sm font-semibold text-foreground">Call History</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 border-b border-border">
+                    <tr>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Lead</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Disposition</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Callback</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Notes</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Recording</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Date</th>
+                      <th className="px-4 py-2.5 w-16" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {calls.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-8 text-center text-sm text-muted-foreground">No calls yet</td>
+                      </tr>
+                    ) : (
+                      calls.map((call) => {
+                        const isEditing = editingCallId === call.id;
+                        return (
+                          <tr key={call.id} className={isEditing ? "bg-muted/40" : "hover:bg-muted/20 transition-colors"}>
+                            <td className="px-4 py-3 align-top">
+                              <div className="font-medium text-foreground">{call.leads?.name || "-"}</div>
+                              <div className="text-xs text-muted-foreground font-mono">{call.leads?.phone || ""}</div>
+                            </td>
+                            <td className="px-4 py-3 align-top text-muted-foreground whitespace-nowrap">
+                              {call.duration_seconds ? `${call.duration_seconds}s` : "-"}
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              {isEditing ? (
+                                <select
+                                  value={editDraft.disposition}
+                                  onChange={(e) => setEditDraft({ ...editDraft, disposition: e.target.value })}
+                                  className="px-2.5 py-1.5 border border-border rounded-md bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                                >
+                                  <option value="">Select outcome...</option>
+                                  <option value="connected">Connected</option>
+                                  <option value="voicemail">Voicemail</option>
+                                  <option value="no_answer">No Answer</option>
+                                  <option value="busy">Busy</option>
+                                  <option value="callback">Callback</option>
+                                </select>
+                              ) : call.disposition ? (
+                                <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-accent-green/15 text-accent-green-foreground whitespace-nowrap">
+                                  {call.disposition}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">pending</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              {isEditing ? (
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditDraft({ ...editDraft, disposition: "callback" })}
+                                    title="Schedule callback"
+                                    className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                                  >
+                                    <ClockIcon className="w-4 h-4" />
+                                  </button>
+                                  {editDraft.disposition === "callback" && (
+                                    <input
+                                      type="datetime-local"
+                                      value={editDraft.callbackAt}
+                                      onChange={(e) => setEditDraft({ ...editDraft, callbackAt: e.target.value })}
+                                      className="text-xs px-2 py-1 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                                    />
+                                  )}
+                                </div>
+                              ) : call.callback_at ? (
+                                <span className="text-xs text-foreground whitespace-nowrap">{new Date(call.callback_at).toLocaleString()}</span>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">-</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 align-top max-w-[180px]">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editDraft.notes}
+                                  onChange={(e) => setEditDraft({ ...editDraft, notes: e.target.value })}
+                                  placeholder="Add notes..."
+                                  className="w-full text-xs px-2.5 py-1.5 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                                />
+                              ) : (
+                                <span className="text-xs text-muted-foreground line-clamp-2" title={call.notes || ""}>
+                                  {call.notes || "-"}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              {call.recording_url ? (
+                                <a
+                                  href={call.recording_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-foreground underline underline-offset-2 hover:no-underline text-xs whitespace-nowrap"
+                                >
+                                  Listen
+                                </a>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">-</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 align-top text-xs text-muted-foreground whitespace-nowrap">
+                              {new Date(call.created_at).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              {isEditing ? (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => saveEdit(call.id)}
+                                    disabled={!editDraft.disposition || savingEdit}
+                                    title="Save"
+                                    className="p-1.5 rounded-md hover:bg-accent-green/15 text-accent-green-foreground disabled:opacity-40 transition-colors"
+                                  >
+                                    <CheckIcon className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={cancelEdit}
+                                    title="Cancel"
+                                    className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors"
+                                  >
+                                    <XIcon className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => startEdit(call)}
+                                  disabled={!!activeCall || !!editingCallId}
+                                  title="Edit"
+                                  className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                                >
+                                  <PencilIcon className="w-4 h-4" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </main>

@@ -71,4 +71,5 @@ export type Call = {
   callback_at: string | null;
   created_at: string;
   updated_at: string;
+  leads?: { id: string; name: string; phone: string } | null;
 };
