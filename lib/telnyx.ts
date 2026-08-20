@@ -68,7 +68,6 @@ export function verifyTelnyxSignature(
 export function buildComplianceAndDialTeXML(dialTo: string, recordingUrl: string) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say>This call is being recorded for quality assurance and training purposes.</Say>
   <Dial callerId="${telnyxPhoneNumber}" record="record-from-answer-dual" recordingStatusCallback="${recordingUrl}" recordingStatusCallbackEvent="completed">
     <Number>${dialTo}</Number>
   </Dial>
