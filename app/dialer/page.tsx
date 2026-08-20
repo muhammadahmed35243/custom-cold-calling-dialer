@@ -232,6 +232,15 @@ export default function DialerPage() {
     setEditDraft({ disposition: "", notes: "", callbackAt: "" });
   };
 
+  const startCallbackEdit = (call: Call) => {
+    setEditingCallId(call.id);
+    setEditDraft({
+      disposition: "callback",
+      notes: call.notes || "",
+      callbackAt: toDatetimeLocal(call.callback_at),
+    });
+  };
+
   const saveEdit = async (callId: string) => {
     if (!editDraft.disposition || !user) return;
     setSavingEdit(true);
@@ -710,14 +719,24 @@ export default function DialerPage() {
                                   </button>
                                 </div>
                               ) : (
-                                <button
-                                  onClick={() => startEdit(call)}
-                                  disabled={!!activeCall || !!editingCallId}
-                                  title="Edit"
-                                  className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
-                                >
-                                  <PencilIcon className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => startEdit(call)}
+                                    disabled={!!activeCall || !!editingCallId}
+                                    title="Edit"
+                                    className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                                  >
+                                    <PencilIcon className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => startCallbackEdit(call)}
+                                    disabled={!!activeCall || !!editingCallId}
+                                    title="Set callback"
+                                    className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                                  >
+                                    <ClockIcon className="w-4 h-4" />
+                                  </button>
+                                </div>
                               )}
                             </td>
                           </tr>
