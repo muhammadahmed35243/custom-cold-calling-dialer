@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
-import { Logo } from "@/components/Logo";
+import { AppHeader } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 
 export const dynamic = "force-dynamic";
@@ -185,28 +185,7 @@ export default function MailPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Logo product="Mail" />
-            <button
-              onClick={() => router.push(agentInfo?.role === "admin" ? "/dashboard" : "/dialer")}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              ← Back
-            </button>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{user?.email}</span>
-            <button
-              onClick={handleSignOut}
-              className="px-3 py-1.5 text-sm bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader userEmail={user?.email} isAdmin={agentInfo?.role === "admin"} onSignOut={handleSignOut} />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {!hasMailbox ? (

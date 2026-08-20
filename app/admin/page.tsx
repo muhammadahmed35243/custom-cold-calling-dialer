@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import type { Agent, Call } from "@/lib/supabase";
-import { Logo } from "@/components/Logo";
+import { AppHeader } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 import { StatusBadge } from "@/components/StatusBadge";
 
@@ -73,34 +73,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Logo product="Admin" />
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              ← Dashboard
-            </button>
-            <button
-              onClick={() => router.push("/mail")}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Mail
-            </button>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{user?.email}</span>
-            <button
-              onClick={handleSignOut}
-              className="px-3 py-1.5 text-sm bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader userEmail={user?.email} isAdmin onSignOut={handleSignOut} />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex gap-1 mb-6 border-b border-border">

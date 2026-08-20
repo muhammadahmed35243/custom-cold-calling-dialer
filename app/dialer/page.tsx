@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import type { Lead, Call } from "@/lib/supabase";
-import { Logo } from "@/components/Logo";
+import { AppHeader } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StatRow } from "@/components/StatRow";
@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 export default function DialerPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
@@ -57,6 +58,7 @@ export default function DialerPage() {
       }
 
       setUser(authUser);
+      setIsAdmin(agent.role === "admin");
       loadLeadsAndCalls();
       setLoading(false);
     };
@@ -416,28 +418,7 @@ export default function DialerPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Logo />
-            <button
-              onClick={() => router.push("/mail")}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Mail
-            </button>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{user?.email}</span>
-            <button
-              onClick={handleSignOut}
-              className="px-3 py-1.5 text-sm bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader userEmail={user?.email} isAdmin={isAdmin} onSignOut={handleSignOut} />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="mb-8">
