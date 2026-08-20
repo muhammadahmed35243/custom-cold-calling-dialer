@@ -4,6 +4,7 @@ import { validateAndFormatPhone } from "./phone";
 export type ParsedLead = {
   name: string;
   phone: string;
+  email?: string;
   company?: string;
   notes?: string;
 };
@@ -29,6 +30,7 @@ export function parseCSV(csvText: string): ParseResult {
     const rowNumber = index + 2; // Header is row 1
     const name = row.name?.trim();
     const phone = row.phone?.trim();
+    const email = row.email?.trim();
     const company = row.company?.trim();
     const notes = row.notes?.trim();
 
@@ -51,6 +53,7 @@ export function parseCSV(csvText: string): ParseResult {
     validLeads.push({
       name,
       phone: phoneResult.formatted!,
+      email: email || undefined,
       company: company || undefined,
       notes: notes || undefined,
     });

@@ -56,7 +56,7 @@ export default function DialerPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showAddLeadForm, setShowAddLeadForm] = useState(false);
-  const [addLeadForm, setAddLeadForm] = useState({ name: "", phone: "", company: "", notes: "" });
+  const [addLeadForm, setAddLeadForm] = useState({ name: "", phone: "", email: "", company: "", notes: "" });
   const [addLeadStatus, setAddLeadStatus] = useState<string>("");
   const [isAddingLead, setIsAddingLead] = useState(false);
 
@@ -282,7 +282,7 @@ export default function DialerPage() {
   // drops off this list without a separate query.
   const callbackEntries = useMemo(() => {
     const seen = new Set<string>();
-    const entries: { leadId: string; name: string; phone: string; callbackAt: string | null }[] = [];
+    const entries: { leadId: string; name: string; phone: string; email: string | null; callbackAt: string | null }[] = [];
     for (const call of calls) {
       if (seen.has(call.lead_id)) continue;
       seen.add(call.lead_id);
@@ -291,6 +291,7 @@ export default function DialerPage() {
           leadId: call.lead_id,
           name: call.leads.name,
           phone: call.leads.phone,
+          email: call.leads.email,
           callbackAt: call.callback_at,
         });
       }
@@ -298,11 +299,12 @@ export default function DialerPage() {
     return entries;
   }, [calls]);
 
-  const handleCallbackNow = (entry: { leadId: string; name: string; phone: string }) => {
+  const handleCallbackNow = (entry: { leadId: string; name: string; phone: string; email: string | null }) => {
     const leadStub: Lead = {
       id: entry.leadId,
       name: entry.name,
       phone: entry.phone,
+      email: entry.email,
       company: null,
       notes: null,
       status: "callback",
@@ -344,7 +346,7 @@ export default function DialerPage() {
       const result = await response.json();
       if (response.ok) {
         setAddLeadStatus(`✓ ${result.message}`);
-        setAddLeadForm({ name: "", phone: "", company: "", notes: "" });
+        setAddLeadForm({ name: "", phone: "", email: "", company: "", notes: "" });
         setTimeout(() => {
           setShowAddLeadForm(false);
           setAddLeadStatus("");
@@ -416,6 +418,13 @@ export default function DialerPage() {
                 className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
               />
               <input
+                type="email"
+                placeholder="Email (optional)"
+                value={addLeadForm.email}
+                onChange={(e) => setAddLeadForm({ ...addLeadForm, email: e.target.value })}
+                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+              />
+              <input
                 type="text"
                 placeholder="Company (optional)"
                 value={addLeadForm.company}
@@ -440,7 +449,7 @@ export default function DialerPage() {
                 <button
                   onClick={() => {
                     setShowAddLeadForm(false);
-                    setAddLeadForm({ name: "", phone: "", company: "", notes: "" });
+                    setAddLeadForm({ name: "", phone: "", email: "", company: "", notes: "" });
                     setAddLeadStatus("");
                   }}
                   className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2 px-4 rounded-lg transition-colors"
@@ -472,7 +481,7 @@ export default function DialerPage() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">CSV format: name, phone, company (optional), notes (optional)</p>
+                <p className="text-xs text-muted-foreground mt-2">CSV format: name, phone, email (optional), company (optional), notes (optional)</p>
               </div>
             </div>
           )}
@@ -525,6 +534,12 @@ export default function DialerPage() {
                     <span className="text-sm text-muted-foreground">Phone: </span>
                     <span className="text-sm font-medium text-foreground font-mono">{currentLead.phone}</span>
                   </div>
+                  {currentLead.email && (
+                    <div>
+                      <span className="text-sm text-muted-foreground">Email: </span>
+                      <span className="text-sm font-medium text-foreground">{currentLead.email}</span>
+                    </div>
+                  )}
                   {currentLead.company && (
                     <div>
                       <span className="text-sm text-muted-foreground">Company: </span>

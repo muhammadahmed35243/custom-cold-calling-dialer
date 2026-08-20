@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { name, phone, company, notes } = await req.json();
+    const { name, phone, email, company, notes } = await req.json();
 
     if (!name || !phone) {
       return NextResponse.json(
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
         {
           name: name.trim(),
           phone: formattedPhone,
+          email: email ? email.trim() : null,
           company: company ? company.trim() : null,
           notes: notes ? notes.trim() : null,
           status: "pending",

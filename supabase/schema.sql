@@ -15,6 +15,7 @@ CREATE TABLE leads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   phone TEXT NOT NULL,
+  email TEXT,
   company TEXT,
   notes TEXT,
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'called', 'callback')),

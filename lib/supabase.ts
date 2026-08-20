@@ -39,6 +39,7 @@ export type Lead = {
   id: string;
   name: string;
   phone: string;
+  email: string | null;
   company: string | null;
   notes: string | null;
   status: "pending" | "in_progress" | "called" | "callback";
@@ -71,5 +72,5 @@ export type Call = {
   callback_at: string | null;
   created_at: string;
   updated_at: string;
-  leads?: { id: string; name: string; phone: string } | null;
+  leads?: { id: string; name: string; phone: string; email: string | null } | null;
 };

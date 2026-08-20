@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   // every already-called lead if this ran through the client's anon key.
   const { data, error } = await supabaseServiceClient
     .from("calls")
-    .select("*, leads(id, name, phone)")
+    .select("*, leads(id, name, phone, email)")
     .eq("agent_email", user.email)
     .order("created_at", { ascending: false });
 
