@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import type { Lead, Call } from "@/lib/supabase";
+import { Logo } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -254,7 +255,7 @@ export default function DialerPage() {
     <div className="min-h-screen bg-background">
       <header className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <h1 className="text-lg font-semibold text-foreground">Cold Dialer</h1>
+          <Logo />
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">{user?.email}</span>
             <button

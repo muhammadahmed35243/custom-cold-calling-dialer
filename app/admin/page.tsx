@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import type { Agent, Call } from "@/lib/supabase";
+import { Logo } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -73,13 +74,13 @@ export default function AdminDashboard() {
       <header className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
+            <Logo product="Admin" />
             <button
               onClick={() => router.push("/dashboard")}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               ← Dashboard
             </button>
-            <h1 className="text-lg font-semibold text-foreground">Admin Dashboard</h1>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">{user?.email}</span>

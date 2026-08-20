@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Orange inverted triangle -->
+  <polygon points="30,6 70,6 50,32" fill="#FF9500"/>
+  <!-- Orange rectangle -->
+  <rect x="40" y="32" width="20" height="72" fill="#FF9500"/>
+</svg>

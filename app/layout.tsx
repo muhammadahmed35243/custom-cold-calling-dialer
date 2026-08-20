@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { SplashScreen } from "@/components/SplashScreen";
 
 const instrumentSans = Instrument_Sans({
   subsets: ["latin"],
@@ -16,8 +17,12 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cold-Calling Dialer",
+  title: "JETZT Dialer",
   description: "Power dialer for cold calling",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export const dynamic = "force-dynamic";
@@ -30,6 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${instrumentSans.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-background text-foreground font-sans antialiased">
+        <SplashScreen />
         <Providers>{children}</Providers>
       </body>
     </html>

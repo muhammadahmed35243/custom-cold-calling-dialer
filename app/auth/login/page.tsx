@@ -3,6 +3,7 @@
 import { supabaseAuth } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Logo } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -45,8 +46,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background dotted-bg">
       <div className="bg-card border border-border rounded-2xl shadow-sm p-8 max-w-md w-full">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-foreground mb-1 tracking-tight">Cold Dialer</h1>
-          <p className="text-muted-foreground text-sm">Sign in to access the dialer</p>
+          <Logo />
+          <p className="text-muted-foreground text-sm mt-2">Sign in to access the dialer</p>
         </div>
 
         <div className="mb-6">

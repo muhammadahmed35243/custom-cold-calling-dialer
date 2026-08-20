@@ -38,6 +38,10 @@ const config: Config = {
           DEFAULT: "var(--accent-green)",
           foreground: "var(--accent-green-foreground)",
         },
+        brand: {
+          DEFAULT: "var(--brand)",
+          foreground: "var(--brand-foreground)",
+        },
         destructive: {
           DEFAULT: "var(--destructive)",
           foreground: "var(--destructive-foreground)",

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
+import { JetztLogo } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,7 @@ export default function DashboardSelector() {
       <div className="w-full max-w-2xl">
         <div className="bg-card border border-border rounded-2xl shadow-sm p-8 md:p-12">
           <div className="text-center mb-10">
+            <JetztLogo className="h-8 w-auto mx-auto mb-4" />
             <h1 className="text-2xl font-semibold text-foreground mb-1 tracking-tight">Welcome, Admin</h1>
             <p className="text-muted-foreground text-sm">{user?.email}</p>
           </div>
