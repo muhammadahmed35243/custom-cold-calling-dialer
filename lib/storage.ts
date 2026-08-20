@@ -1,7 +1,9 @@
 import { supabaseServiceClient } from "./supabase";
 
-export async function downloadFile(url: string): Promise<Buffer> {
-  const response = await fetch(url);
+export async function downloadFile(url: string, authHeader?: string): Promise<Buffer> {
+  const response = await fetch(url, {
+    headers: authHeader ? { Authorization: authHeader } : undefined,
+  });
   if (!response.ok) throw new Error(`Failed to download file: ${response.statusText}`);
   return Buffer.from(await response.arrayBuffer());
 }
