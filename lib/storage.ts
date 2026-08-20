@@ -45,3 +45,38 @@ export async function getRecordingUrl(bucket: string, path: string): Promise<str
 
   return data.signedUrl;
 }
+
+// Shared by both recording webhook handlers (TeXML phone-bridge calls and
+// Call Control WebRTC calls) -- same download/store/record-metadata flow
+// regardless of which product generated the recording.
+export async function saveRecordingForCall(
+  callId: string,
+  recordingUrl: string,
+  recordingSid: string | null,
+  downloadAuthHeader?: string
+) {
+  const recordingData = await downloadFile(recordingUrl, downloadAuthHeader);
+
+  const now = new Date();
+  const dateFolder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const storagePath = `${dateFolder}/call_${callId}.mp3`;
+
+  const { path, url: storageUrl } = await uploadRecordingToStorage("recordings", storagePath, recordingData);
+
+  const expiryDate = new Date(now);
+  expiryDate.setDate(expiryDate.getDate() + 90);
+
+  const { error } = await supabaseServiceClient
+    .from("calls")
+    .update({
+      recording_sid: recordingSid,
+      recording_storage_path: path,
+      recording_url: storageUrl,
+      recording_size_bytes: recordingData.length,
+      recording_uploaded_at: new Date().toISOString(),
+      recording_expires_at: expiryDate.toISOString(),
+    })
+    .eq("id", callId);
+
+  if (error) throw new Error(`Failed to update call record: ${error.message}`);
+}

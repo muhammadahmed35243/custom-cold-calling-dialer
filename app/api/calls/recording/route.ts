@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
 import { verifyTelnyxSignature } from "@/lib/telnyx";
-import { downloadFile, uploadRecordingToStorage } from "@/lib/storage";
+import { saveRecordingForCall } from "@/lib/storage";
 
 export async function POST(req: NextRequest) {
   const signature = req.headers.get("telnyx-signature-ed25519") || "";
@@ -38,39 +38,7 @@ export async function POST(req: NextRequest) {
     // Telnyx's RecordingUrl is a pre-signed S3 URL (auth baked into the query
     // string via X-Amz-Signature) -- it's self-authenticating and rejects an
     // additional Authorization header, unlike Telnyx's own API endpoints.
-    const recordingData = await downloadFile(recordingUrl);
-
-    // Upload to Supabase Storage
-    const now = new Date();
-    const dateFolder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const storagePath = `${dateFolder}/call_${callRecord.id}.mp3`;
-
-    const { path, url: storageUrl } = await uploadRecordingToStorage(
-      "recordings",
-      storagePath,
-      recordingData
-    );
-
-    // Update call record with recording details
-    const expiryDate = new Date(now);
-    expiryDate.setDate(expiryDate.getDate() + 90);
-
-    const { error: updateError } = await supabaseServiceClient
-      .from("calls")
-      .update({
-        recording_sid: recordingSid,
-        recording_storage_path: path,
-        recording_url: storageUrl,
-        recording_size_bytes: recordingData.length,
-        recording_uploaded_at: new Date().toISOString(),
-        recording_expires_at: expiryDate.toISOString(),
-      })
-      .eq("id", callRecord.id);
-
-    if (updateError) {
-      console.error("Update error:", updateError);
-      return new NextResponse(`Update failed: ${updateError.message}`, { status: 500 });
-    }
+    await saveRecordingForCall(callRecord.id, recordingUrl, recordingSid || null);
 
     return new NextResponse("OK", { status: 200 });
   } catch (error) {

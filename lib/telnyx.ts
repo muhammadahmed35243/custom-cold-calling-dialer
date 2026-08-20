@@ -65,6 +65,31 @@ export function verifyTelnyxSignature(
   }
 }
 
+// Call Control's recording API -- used for WebRTC calls, which have no
+// TeXML <Dial record> attribute to lean on the way phone-bridge calls do.
+// Recording stops automatically on hangup and delivers a
+// call.recording.saved webhook (handled in
+// app/api/calls/webrtc-recording/route.ts), same as the phone-bridge flow's
+// recordingStatusCallback.
+export async function startCallControlRecording(callControlId: string) {
+  const res = await fetch(
+    `https://api.telnyx.com/v2/calls/${callControlId}/actions/record_start`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.TELNYX_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ format: "mp3", channels: "dual" }),
+    }
+  );
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Failed to start recording (${res.status}): ${body.slice(0, 500)}`);
+  }
+}
+
 export function buildComplianceAndDialTeXML(dialTo: string, recordingUrl: string, dialStatusUrl: string) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>

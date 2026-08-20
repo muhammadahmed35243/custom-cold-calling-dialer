@@ -40,9 +40,16 @@ export default function DialerPage() {
   const webrtcClientRef = useRef<any>(null);
   const webrtcCallRef = useRef<any>(null);
   const webrtcReachedActiveRef = useRef(false);
+  const webrtcRecordingStartedRef = useRef(false);
   const webrtcStartRef = useRef<number | null>(null);
   const webrtcCallerNumberRef = useRef<string | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
+
+  const [myPhoneNumber, setMyPhoneNumber] = useState("");
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneDraft, setPhoneDraft] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -66,6 +73,7 @@ export default function DialerPage() {
       }
 
       setUser(authUser);
+      setMyPhoneNumber(agent.phone_number || "");
       setIsAdmin(agent.role === "admin");
       loadLeadsAndCalls();
       setLoading(false);
@@ -235,6 +243,7 @@ export default function DialerPage() {
       if (!client) return;
 
       webrtcReachedActiveRef.current = false;
+      webrtcRecordingStartedRef.current = false;
       webrtcStartRef.current = Date.now();
 
       const call = client.newCall({
@@ -249,6 +258,10 @@ export default function DialerPage() {
           if (state === "active") {
             webrtcReachedActiveRef.current = true;
             setCallStatus("Connected");
+            if (!webrtcRecordingStartedRef.current) {
+              webrtcRecordingStartedRef.current = true;
+              startWebrtcRecording(callRecord.id, notification.call?.telnyxCallControlId);
+            }
           } else if (["ringing", "trying", "requesting", "early", "answering"].includes(state)) {
             setCallStatus("Ringing...");
           } else if (["hangup", "destroy", "purge"].includes(state)) {
@@ -260,6 +273,25 @@ export default function DialerPage() {
       webrtcCallRef.current = call;
     } catch (error) {
       setCallStatus(`Error: ${error}`);
+    }
+  };
+
+  const startWebrtcRecording = async (callId: string, callControlId: string | undefined) => {
+    if (!callControlId) return;
+    try {
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      if (!session) return;
+
+      await fetch(`/api/calls/${callId}/webrtc-record-start`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ callControlId }),
+      });
+    } catch {
+      // Best-effort -- a failed recording start shouldn't interrupt the call
     }
   };
 
@@ -563,6 +595,51 @@ export default function DialerPage() {
     }
   };
 
+  const startEditPhone = () => {
+    setPhoneDraft(myPhoneNumber);
+    setPhoneError(null);
+    setEditingPhone(true);
+  };
+
+  const cancelEditPhone = () => {
+    setEditingPhone(false);
+    setPhoneError(null);
+  };
+
+  const savePhone = async () => {
+    setSavingPhone(true);
+    setPhoneError(null);
+
+    try {
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      if (!session) {
+        setPhoneError("Session expired, please login again");
+        return;
+      }
+
+      const response = await fetch("/api/agents/me", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ phone_number: phoneDraft }),
+      });
+      const result = await response.json();
+
+      if (response.ok) {
+        setMyPhoneNumber(result.agent.phone_number);
+        setEditingPhone(false);
+      } else {
+        setPhoneError(result.error || "Failed to update phone number");
+      }
+    } catch (error) {
+      setPhoneError(error instanceof Error ? error.message : "Failed to update phone number");
+    } finally {
+      setSavingPhone(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await supabaseAuth.auth.signOut();
     router.push("/auth/login");
@@ -744,6 +821,42 @@ export default function DialerPage() {
                 </button>
               </div>
             </div>
+
+            {callMode === "phone" && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-medium text-muted-foreground uppercase tracking-wide">My Number</span>
+                {editingPhone ? (
+                  <>
+                    <input
+                      type="tel"
+                      value={phoneDraft}
+                      onChange={(e) => setPhoneDraft(e.target.value)}
+                      placeholder="+923001234567"
+                      className="px-2 py-1 border border-border rounded-md bg-background text-foreground font-mono w-40 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                    />
+                    <button
+                      onClick={savePhone}
+                      disabled={savingPhone}
+                      className="text-accent-green-foreground hover:underline disabled:opacity-40"
+                    >
+                      Save
+                    </button>
+                    <button onClick={cancelEditPhone} className="text-muted-foreground hover:underline">
+                      Cancel
+                    </button>
+                    {phoneError && <span className="text-destructive">{phoneError}</span>}
+                  </>
+                ) : (
+                  <button
+                    onClick={startEditPhone}
+                    disabled={!!activeCall}
+                    className="font-mono text-foreground hover:text-brand transition-colors disabled:opacity-50"
+                  >
+                    {myPhoneNumber || "Set your number"}
+                  </button>
+                )}
+              </div>
+            )}
 
             {activeCall ? (
               <div className="bg-card border border-border rounded-xl p-6">
