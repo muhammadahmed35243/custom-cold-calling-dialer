@@ -28,11 +28,14 @@ export async function PATCH(
   const auth = await requireAdmin(req);
   if (auth.error) return auth.error;
 
-  const { is_active } = await req.json();
+  const body = await req.json();
+  const updates: Record<string, unknown> = {};
+  if ("is_active" in body) updates.is_active = body.is_active;
+  if ("alias_email" in body) updates.alias_email = body.alias_email || null;
 
   const { error } = await supabaseServiceClient
     .from("agents")
-    .update({ is_active })
+    .update(updates)
     .eq("id", params.id);
 
   if (error) {

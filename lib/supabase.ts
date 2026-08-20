@@ -31,6 +31,7 @@ export type Agent = {
   display_name: string;
   role: "admin" | "agent";
   is_active: boolean;
+  alias_email: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -437,7 +437,15 @@ export default function DialerPage() {
     <div className="min-h-screen bg-background">
       <header className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Logo />
+          <div className="flex items-center gap-4">
+            <Logo />
+            <button
+              onClick={() => router.push("/mail")}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Mail
+            </button>
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">{user?.email}</span>
             <button

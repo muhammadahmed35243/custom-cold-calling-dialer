@@ -6,6 +6,7 @@ CREATE TABLE agents (
   display_name TEXT NOT NULL,
   role VARCHAR(10) CHECK (role IN ('admin', 'agent')) DEFAULT 'agent',
   is_active BOOLEAN DEFAULT TRUE,
+  alias_email TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );

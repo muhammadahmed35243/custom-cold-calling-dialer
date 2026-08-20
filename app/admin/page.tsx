@@ -81,6 +81,12 @@ export default function AdminDashboard() {
             >
               ← Dashboard
             </button>
+            <button
+              onClick={() => router.push("/mail")}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Mail
+            </button>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">{user?.email}</span>
@@ -190,9 +196,12 @@ function AgentManagement({
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
+  const [newAlias, setNewAlias] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyAgentId, setBusyAgentId] = useState<string | null>(null);
+  const [editingAliasId, setEditingAliasId] = useState<string | null>(null);
+  const [aliasDraft, setAliasDraft] = useState("");
 
   const authedFetch = async (url: string, options: RequestInit = {}) => {
     const { data: { session } } = await supabaseAuth.auth.getSession();
@@ -251,6 +260,7 @@ function AgentManagement({
             email: newEmail,
             display_name: newName,
             phone_number: newPhone,
+            alias_email: newAlias || null,
             role: "agent",
             is_active: true,
           },
@@ -261,11 +271,42 @@ function AgentManagement({
       setNewEmail("");
       setNewName("");
       setNewPhone("");
+      setNewAlias("");
       onRefresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add agent");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startEditAlias = (agent: Agent) => {
+    setEditingAliasId(agent.id);
+    setAliasDraft(agent.alias_email || "");
+  };
+
+  const cancelEditAlias = () => {
+    setEditingAliasId(null);
+    setAliasDraft("");
+  };
+
+  const saveAlias = async (agent: Agent) => {
+    setBusyAgentId(agent.id);
+    try {
+      const response = await authedFetch(`/api/agents/${agent.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ alias_email: aliasDraft || null }),
+      });
+      if (response.ok) {
+        cancelEditAlias();
+        onRefresh();
+      } else {
+        setError((await response.json()).error || "Failed to update alias");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update alias");
+    } finally {
+      setBusyAgentId(null);
     }
   };
 
@@ -298,6 +339,13 @@ function AgentManagement({
             required
             className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
           />
+          <input
+            type="email"
+            placeholder="Mailbox Alias (optional, e.g. name@thejetzt.com)"
+            value={newAlias}
+            onChange={(e) => setNewAlias(e.target.value)}
+            className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+          />
           {error && <div className="text-sm text-destructive">{error}</div>}
           <button
             type="submit"
@@ -316,6 +364,7 @@ function AgentManagement({
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Email</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Phone</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Mailbox Alias</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">Actions</th>
             </tr>
@@ -326,6 +375,39 @@ function AgentManagement({
                 <td className="px-6 py-4 text-sm text-foreground">{agent.display_name}</td>
                 <td className="px-6 py-4 text-sm text-muted-foreground">{agent.email}</td>
                 <td className="px-6 py-4 text-sm text-muted-foreground font-mono">{agent.phone_number}</td>
+                <td className="px-6 py-4 text-sm">
+                  {editingAliasId === agent.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="email"
+                        value={aliasDraft}
+                        onChange={(e) => setAliasDraft(e.target.value)}
+                        placeholder="name@thejetzt.com"
+                        className="px-2 py-1 border border-border rounded-md bg-background text-foreground text-xs w-40 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                      />
+                      <button
+                        onClick={() => saveAlias(agent)}
+                        disabled={busyAgentId === agent.id}
+                        className="text-xs text-accent-green-foreground hover:underline disabled:opacity-40"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={cancelEditAlias}
+                        className="text-xs text-muted-foreground hover:underline"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => startEditAlias(agent)}
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {agent.alias_email || <span className="italic">Set alias</span>}
+                    </button>
+                  )}
+                </td>
                 <td className="px-6 py-4 text-sm">
                   <span
                     className={`px-2 py-0.5 rounded-md text-xs font-medium ${
