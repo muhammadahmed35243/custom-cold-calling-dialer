@@ -5,50 +5,12 @@ import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import type { Lead, Call } from "@/lib/supabase";
 import { Logo } from "@/components/Logo";
+import { Avatar } from "@/components/Avatar";
+import { StatusBadge } from "@/components/StatusBadge";
+import { StatRow } from "@/components/StatRow";
+import { PencilIcon, ClockIcon, CheckIcon, XIcon, MailIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
-
-function PencilIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 3.5a2.121 2.121 0 0 1 3 3L7 16l-4 1 1-4 9.5-9.5Z" />
-    </svg>
-  );
-}
-
-function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>
-      <circle cx="10" cy="10" r="7" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6v4l2.5 2.5" />
-    </svg>
-  );
-}
-
-function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 10.5 8 14.5 16 5.5" />
-    </svg>
-  );
-}
-
-function XIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 5l10 10M15 5 5 15" />
-    </svg>
-  );
-}
-
-function MailIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>
-      <rect x="2.5" y="4.5" width="15" height="11" rx="1.5" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="m3 5.5 7 5.5 7-5.5" />
-    </svg>
-  );
-}
 
 export default function DialerPage() {
   const router = useRouter();
@@ -361,6 +323,25 @@ export default function DialerPage() {
     return entries;
   }, [calls]);
 
+  const todayStats = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const todaysCalls = calls.filter((call) => new Date(call.created_at) >= startOfToday);
+    const connectedToday = todaysCalls.filter((call) => call.disposition === "connected");
+    const durations = todaysCalls.filter((call) => call.duration_seconds).map((call) => call.duration_seconds!);
+    const avgDuration = durations.length
+      ? Math.round(durations.reduce((sum, d) => sum + d, 0) / durations.length)
+      : 0;
+
+    return {
+      pending: leads.length,
+      calledToday: todaysCalls.length,
+      connectedToday: connectedToday.length,
+      avgDuration: avgDuration ? `${avgDuration}s` : "-",
+    };
+  }, [calls, leads]);
+
   const handleCallbackNow = (entry: { leadId: string; name: string; phone: string; email: string | null }) => {
     const leadStub: Lead = {
       id: entry.leadId,
@@ -459,6 +440,17 @@ export default function DialerPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <StatRow
+            stats={[
+              { label: "Pending", value: todayStats.pending },
+              { label: "Called Today", value: todayStats.calledToday },
+              { label: "Connected Today", value: todayStats.connectedToday },
+              { label: "Avg Duration", value: todayStats.avgDuration },
+            ]}
+          />
+        </div>
+
         {/* Upload Options */}
         <div className="bg-card border border-border rounded-xl p-6 mb-8">
           <div className="flex justify-between items-center mb-4">
@@ -572,12 +564,15 @@ export default function DialerPage() {
                     <button
                       key={lead.id}
                       onClick={() => setCurrentLead(lead)}
-                      className={`w-full text-left px-6 py-3.5 border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors ${
-                        currentLead?.id === lead.id ? "bg-muted border-l-2 border-l-foreground" : ""
+                      className={`w-full flex items-center gap-3 text-left px-6 py-3.5 border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors ${
+                        currentLead?.id === lead.id ? "bg-muted border-l-2 border-l-brand" : ""
                       }`}
                     >
-                      <div className="text-sm font-medium text-foreground">{lead.name}</div>
-                      <div className="text-xs text-muted-foreground font-mono">{lead.phone}</div>
+                      <Avatar name={lead.name} size="sm" />
+                      <div>
+                        <div className="text-sm font-medium text-foreground">{lead.name}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{lead.phone}</div>
+                      </div>
                     </button>
                   ))
                 )}
@@ -588,41 +583,38 @@ export default function DialerPage() {
           {/* Call Controls */}
           <div className="lg:col-span-2 space-y-6">
             {activeCall ? (
-              <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Calling {currentLead?.name || "lead"}...</span>
-                <span className="text-sm font-medium text-foreground">{callStatus}</span>
+              <div className="bg-card border border-border rounded-xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-sm font-semibold text-foreground">Active Call</h3>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-green-foreground">
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent-green animate-pulse" />
+                    Live
+                  </span>
+                </div>
+                <div className="flex flex-col items-center text-center gap-3">
+                  <Avatar name={currentLead?.name || "lead"} size="lg" />
+                  <div>
+                    <div className="text-base font-semibold text-foreground">{currentLead?.name || "Lead"}</div>
+                    <div className="text-sm text-muted-foreground font-mono">{currentLead?.phone}</div>
+                  </div>
+                  <span className="text-sm font-medium text-brand">{callStatus}</span>
+                </div>
               </div>
             ) : currentLead ? (
               <div className="bg-card border border-border rounded-xl p-6">
                 <h3 className="text-sm font-semibold text-foreground mb-4">Current Lead</h3>
-                <div className="space-y-2 mb-6">
-                  <div>
-                    <span className="text-sm text-muted-foreground">Name: </span>
-                    <span className="text-sm font-medium text-foreground">{currentLead.name}</span>
+                <div className="flex items-center gap-4 mb-6">
+                  <Avatar name={currentLead.name} size="lg" />
+                  <div className="space-y-1">
+                    <div className="text-base font-semibold text-foreground">{currentLead.name}</div>
+                    <div className="text-sm text-muted-foreground font-mono">{currentLead.phone}</div>
+                    {currentLead.email && <div className="text-sm text-muted-foreground">{currentLead.email}</div>}
+                    {currentLead.company && <div className="text-sm text-muted-foreground">{currentLead.company}</div>}
                   </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">Phone: </span>
-                    <span className="text-sm font-medium text-foreground font-mono">{currentLead.phone}</span>
-                  </div>
-                  {currentLead.email && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">Email: </span>
-                      <span className="text-sm font-medium text-foreground">{currentLead.email}</span>
-                    </div>
-                  )}
-                  {currentLead.company && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">Company: </span>
-                      <span className="text-sm font-medium text-foreground">{currentLead.company}</span>
-                    </div>
-                  )}
-                  {currentLead.notes && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">Notes: </span>
-                      <span className="text-sm text-foreground">{currentLead.notes}</span>
-                    </div>
-                  )}
                 </div>
+                {currentLead.notes && (
+                  <div className="mb-6 text-sm text-foreground bg-secondary rounded-lg p-3">{currentLead.notes}</div>
+                )}
 
                 <button
                   onClick={() => handleCall(currentLead)}
@@ -646,9 +638,12 @@ export default function DialerPage() {
                 <div className="divide-y divide-border">
                   {callbackEntries.map((entry) => (
                     <div key={entry.leadId} className="px-6 py-3.5 flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium text-foreground">{entry.name}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{entry.phone}</div>
+                      <div className="flex items-center gap-3">
+                        <Avatar name={entry.name} size="sm" />
+                        <div>
+                          <div className="text-sm font-medium text-foreground">{entry.name}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{entry.phone}</div>
+                        </div>
                       </div>
                       <div className="flex items-center gap-3">
                         {entry.callbackAt && (
@@ -698,8 +693,13 @@ export default function DialerPage() {
                         return (
                           <tr key={call.id} className={isEditing ? "bg-muted/40" : "hover:bg-muted/20 transition-colors"}>
                             <td className="px-4 py-3 align-top">
-                              <div className="font-medium text-foreground">{call.leads?.name || "-"}</div>
-                              <div className="text-xs text-muted-foreground font-mono">{call.leads?.phone || ""}</div>
+                              <div className="flex items-center gap-2.5">
+                                {call.leads?.name && <Avatar name={call.leads.name} size="sm" />}
+                                <div>
+                                  <div className="font-medium text-foreground">{call.leads?.name || "-"}</div>
+                                  <div className="text-xs text-muted-foreground font-mono">{call.leads?.phone || ""}</div>
+                                </div>
+                              </div>
                             </td>
                             <td className="px-4 py-3 align-top text-muted-foreground whitespace-nowrap">
                               {call.duration_seconds ? `${call.duration_seconds}s` : "-"}
@@ -718,12 +718,8 @@ export default function DialerPage() {
                                   <option value="busy">Busy</option>
                                   <option value="callback">Callback</option>
                                 </select>
-                              ) : call.disposition ? (
-                                <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-accent-green/15 text-accent-green-foreground whitespace-nowrap">
-                                  {call.disposition}
-                                </span>
                               ) : (
-                                <span className="text-muted-foreground text-xs">pending</span>
+                                <StatusBadge status={call.disposition} />
                               )}
                             </td>
                             <td className="px-4 py-3 align-top">

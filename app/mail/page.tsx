@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import { Logo } from "@/components/Logo";
+import { Avatar } from "@/components/Avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -259,19 +260,22 @@ export default function MailPage() {
                       <button
                         key={msg.uid}
                         onClick={() => openMessage(msg.uid)}
-                        className="w-full text-left px-6 py-3.5 hover:bg-muted/50 transition-colors"
+                        className="w-full flex items-start gap-3 text-left px-6 py-3.5 hover:bg-muted/50 transition-colors"
                       >
-                        <div className="flex justify-between items-baseline gap-4">
-                          <span className={`text-sm truncate ${msg.seen ? "text-muted-foreground" : "text-foreground font-medium"}`}>
-                            {folder === "Sent" ? msg.to : msg.from}
-                          </span>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {msg.date ? new Date(msg.date).toLocaleString() : ""}
-                          </span>
-                        </div>
-                        <div className={`text-sm truncate mt-0.5 ${msg.seen ? "text-muted-foreground" : "text-foreground"}`}>
-                          {msg.subject}
-                          {msg.hasAttachments && <span className="ml-1.5 text-muted-foreground">📎</span>}
+                        <Avatar name={folder === "Sent" ? msg.to : msg.from} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex justify-between items-baseline gap-4">
+                            <span className={`text-sm truncate ${msg.seen ? "text-muted-foreground" : "text-foreground font-medium"}`}>
+                              {folder === "Sent" ? msg.to : msg.from}
+                            </span>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {msg.date ? new Date(msg.date).toLocaleString() : ""}
+                            </span>
+                          </div>
+                          <div className={`text-sm truncate mt-0.5 ${msg.seen ? "text-muted-foreground" : "text-foreground"}`}>
+                            {msg.subject}
+                            {msg.hasAttachments && <span className="ml-1.5 text-muted-foreground">📎</span>}
+                          </div>
                         </div>
                       </button>
                     ))

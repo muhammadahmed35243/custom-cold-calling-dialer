@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import type { Agent, Call } from "@/lib/supabase";
 import { Logo } from "@/components/Logo";
+import { Avatar } from "@/components/Avatar";
+import { StatusBadge } from "@/components/StatusBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -106,7 +108,7 @@ export default function AdminDashboard() {
             onClick={() => setTab("calls")}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               tab === "calls"
-                ? "text-foreground border-foreground"
+                ? "text-foreground border-brand"
                 : "text-muted-foreground border-transparent hover:text-foreground"
             }`}
           >
@@ -116,7 +118,7 @@ export default function AdminDashboard() {
             onClick={() => setTab("agents")}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               tab === "agents"
-                ? "text-foreground border-foreground"
+                ? "text-foreground border-brand"
                 : "text-muted-foreground border-transparent hover:text-foreground"
             }`}
           >
@@ -140,21 +142,18 @@ export default function AdminDashboard() {
               <tbody className="divide-y divide-border">
                 {calls.map((call) => (
                   <tr key={call.id} className="hover:bg-muted/50 transition-colors">
-                    <td className="px-6 py-4 text-sm text-foreground">{call.agent_email}</td>
+                    <td className="px-6 py-4 text-sm text-foreground">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar name={call.agent_email} size="sm" />
+                        {call.agent_email}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground font-mono">{call.lead_id.slice(0, 8)}</td>
                     <td className="px-6 py-4 text-sm text-foreground">
                       {call.duration_seconds ? `${call.duration_seconds}s` : "-"}
                     </td>
                     <td className="px-6 py-4 text-sm">
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-xs font-medium ${
-                          call.disposition === "connected"
-                            ? "bg-accent-green/15 text-accent-green-foreground"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {call.disposition || "-"}
-                      </span>
+                      <StatusBadge status={call.disposition} />
                     </td>
                     <td className="px-6 py-4 text-sm">
                       {call.recording_url ? (
@@ -372,7 +371,12 @@ function AgentManagement({
           <tbody className="divide-y divide-border">
             {agents.map((agent) => (
               <tr key={agent.id} className="hover:bg-muted/50 transition-colors">
-                <td className="px-6 py-4 text-sm text-foreground">{agent.display_name}</td>
+                <td className="px-6 py-4 text-sm text-foreground">
+                  <div className="flex items-center gap-2.5">
+                    <Avatar name={agent.display_name} size="sm" />
+                    {agent.display_name}
+                  </div>
+                </td>
                 <td className="px-6 py-4 text-sm text-muted-foreground">{agent.email}</td>
                 <td className="px-6 py-4 text-sm text-muted-foreground font-mono">{agent.phone_number}</td>
                 <td className="px-6 py-4 text-sm">
@@ -409,15 +413,7 @@ function AgentManagement({
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm">
-                  <span
-                    className={`px-2 py-0.5 rounded-md text-xs font-medium ${
-                      agent.is_active
-                        ? "bg-accent-green/15 text-accent-green-foreground"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {agent.is_active ? "Active" : "Inactive"}
-                  </span>
+                  <StatusBadge status={agent.is_active ? "active" : "inactive"} />
                 </td>
                 <td className="px-6 py-4 text-sm text-right whitespace-nowrap">
                   <button

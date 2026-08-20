@@ -19,9 +19,11 @@ const config: Config = {
           DEFAULT: "oklch(var(--card) / <alpha-value>)",
           foreground: "oklch(var(--card-foreground) / <alpha-value>)",
         },
+        // primary reuses the brand orange variables directly -- primary
+        // buttons ARE the brand color now, not a separate near-black token.
         primary: {
-          DEFAULT: "oklch(var(--primary) / <alpha-value>)",
-          foreground: "oklch(var(--primary-foreground) / <alpha-value>)",
+          DEFAULT: "rgb(var(--brand) / <alpha-value>)",
+          foreground: "rgb(var(--brand-foreground) / <alpha-value>)",
         },
         secondary: {
           DEFAULT: "oklch(var(--secondary) / <alpha-value>)",
