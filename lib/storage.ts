@@ -11,6 +11,8 @@ export async function downloadFile(url: string, authHeader?: string): Promise<Bu
   return Buffer.from(await response.arrayBuffer());
 }
 
+const RECORDING_URL_EXPIRY_SECONDS = 60 * 60 * 24 * 90; // matches recording_expires_at retention window
+
 export async function uploadRecordingToStorage(
   bucket: string,
   path: string,
@@ -23,17 +25,23 @@ export async function uploadRecordingToStorage(
 
   if (error) throw new Error(`Storage upload failed: ${error.message}`);
 
-  const { data: urlData } = supabaseServiceClient.storage
+  // The bucket is private, so getPublicUrl() would produce a URL that never
+  // resolves -- a signed URL is required to actually fetch the file.
+  const { data: signedData, error: signError } = await supabaseServiceClient.storage
     .from(bucket)
-    .getPublicUrl(path);
+    .createSignedUrl(uploadData.path, RECORDING_URL_EXPIRY_SECONDS);
 
-  return { path: uploadData.path, url: urlData.publicUrl };
+  if (signError) throw new Error(`Failed to create signed URL: ${signError.message}`);
+
+  return { path: uploadData.path, url: signedData.signedUrl };
 }
 
 export async function getRecordingUrl(bucket: string, path: string): Promise<string> {
-  const { data } = supabaseServiceClient.storage
+  const { data, error } = await supabaseServiceClient.storage
     .from(bucket)
-    .getPublicUrl(path);
+    .createSignedUrl(path, RECORDING_URL_EXPIRY_SECONDS);
 
-  return data.publicUrl;
+  if (error) throw new Error(`Failed to create signed URL: ${error.message}`);
+
+  return data.signedUrl;
 }

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     // Upload to Supabase Storage
     const now = new Date();
     const dateFolder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const storagePath = `recordings/${dateFolder}/call_${callRecord.id}.mp3`;
+    const storagePath = `${dateFolder}/call_${callRecord.id}.mp3`;
 
     const { path, url: storageUrl } = await uploadRecordingToStorage(
       "recordings",
