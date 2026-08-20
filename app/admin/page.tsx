@@ -192,6 +192,51 @@ function AgentManagement({
   const [newPhone, setNewPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [busyAgentId, setBusyAgentId] = useState<string | null>(null);
+
+  const authedFetch = async (url: string, options: RequestInit = {}) => {
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+    if (!session) throw new Error("Session expired, please login again");
+    return fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+        ...options.headers,
+      },
+    });
+  };
+
+  const handleToggleActive = async (agent: Agent) => {
+    setBusyAgentId(agent.id);
+    try {
+      const response = await authedFetch(`/api/agents/${agent.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_active: !agent.is_active }),
+      });
+      if (response.ok) onRefresh();
+      else setError((await response.json()).error || "Failed to update agent");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update agent");
+    } finally {
+      setBusyAgentId(null);
+    }
+  };
+
+  const handleDeleteAgent = async (agent: Agent) => {
+    if (!window.confirm(`Delete ${agent.display_name} (${agent.email})? This cannot be undone.`)) return;
+
+    setBusyAgentId(agent.id);
+    try {
+      const response = await authedFetch(`/api/agents/${agent.id}`, { method: "DELETE" });
+      if (response.ok) onRefresh();
+      else setError((await response.json()).error || "Failed to delete agent");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete agent");
+    } finally {
+      setBusyAgentId(null);
+    }
+  };
 
   const handleAddAgent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -272,6 +317,7 @@ function AgentManagement({
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Email</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Phone</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -290,6 +336,22 @@ function AgentManagement({
                   >
                     {agent.is_active ? "Active" : "Inactive"}
                   </span>
+                </td>
+                <td className="px-6 py-4 text-sm text-right whitespace-nowrap">
+                  <button
+                    onClick={() => handleToggleActive(agent)}
+                    disabled={busyAgentId === agent.id}
+                    className="px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
+                  >
+                    {agent.is_active ? "Deactivate" : "Activate"}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteAgent(agent)}
+                    disabled={busyAgentId === agent.id}
+                    className="ml-1 px-2.5 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 disabled:opacity-40 rounded-md transition-colors"
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
