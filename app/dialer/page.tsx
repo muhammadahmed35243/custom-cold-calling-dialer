@@ -41,6 +41,15 @@ function XIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+function MailIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>
+      <rect x="2.5" y="4.5" width="15" height="11" rx="1.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m3 5.5 7 5.5 7-5.5" />
+    </svg>
+  );
+}
+
 export default function DialerPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -54,6 +63,10 @@ export default function DialerPage() {
   const [editingCallId, setEditingCallId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({ disposition: "", notes: "", callbackAt: "" });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [emailModalCall, setEmailModalCall] = useState<Call | null>(null);
+  const [emailDraft, setEmailDraft] = useState({ subject: "", body: "" });
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddLeadForm, setShowAddLeadForm] = useState(false);
   const [addLeadForm, setAddLeadForm] = useState({ name: "", phone: "", email: "", company: "", notes: "" });
@@ -239,6 +252,55 @@ export default function DialerPage() {
       notes: call.notes || "",
       callbackAt: toDatetimeLocal(call.callback_at),
     });
+  };
+
+  const openEmailModal = (call: Call) => {
+    const name = call.leads?.name || "there";
+    setEmailModalCall(call);
+    setEmailError(null);
+    setEmailDraft({
+      subject: "Great speaking with you – JETZT",
+      body: `Hi ${name},\n\nThanks for taking the time to speak with me just now. As promised, following up here -- feel free to reply to this email with any questions, or let me know a good time if you'd like to continue the conversation.\n\nBest,\nJETZT`,
+    });
+  };
+
+  const closeEmailModal = () => {
+    setEmailModalCall(null);
+    setEmailError(null);
+  };
+
+  const sendFollowupEmail = async () => {
+    if (!emailModalCall || !emailDraft.subject || !emailDraft.body) return;
+    setSendingEmail(true);
+    setEmailError(null);
+
+    try {
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      if (!session) {
+        setEmailError("Session expired, please login again");
+        return;
+      }
+
+      const response = await fetch(`/api/calls/${emailModalCall.id}/email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(emailDraft),
+      });
+
+      if (response.ok) {
+        closeEmailModal();
+      } else {
+        const result = await response.json();
+        setEmailError(result.error || "Failed to send");
+      }
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : "Failed to send");
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const saveEdit = async (callId: string) => {
@@ -751,6 +813,14 @@ export default function DialerPage() {
                                   >
                                     <ClockIcon className="w-4 h-4" />
                                   </button>
+                                  <button
+                                    onClick={() => openEmailModal(call)}
+                                    disabled={!!activeCall || !!editingCallId || !call.leads?.email}
+                                    title={call.leads?.email ? "Send follow-up email" : "This lead has no email on file"}
+                                    className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                                  >
+                                    <MailIcon className="w-4 h-4" />
+                                  </button>
                                 </div>
                               )}
                             </td>
@@ -765,6 +835,59 @@ export default function DialerPage() {
           </div>
         </div>
       </main>
+
+      {emailModalCall && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4">
+          <div className="bg-card border border-border rounded-xl shadow-sm p-6 w-full max-w-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-foreground">
+                Follow-up to {emailModalCall.leads?.name || "lead"} ({emailModalCall.leads?.email})
+              </h3>
+              <button
+                onClick={closeEmailModal}
+                className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <XIcon className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={emailDraft.subject}
+                onChange={(e) => setEmailDraft({ ...emailDraft, subject: e.target.value })}
+                placeholder="Subject"
+                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+              />
+              <textarea
+                value={emailDraft.body}
+                onChange={(e) => setEmailDraft({ ...emailDraft, body: e.target.value })}
+                placeholder="Message"
+                rows={9}
+                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+              />
+
+              {emailError && <div className="text-sm text-destructive">{emailError}</div>}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={sendFollowupEmail}
+                  disabled={sendingEmail || !emailDraft.subject || !emailDraft.body}
+                  className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2.5 px-4 rounded-lg transition-all active:translate-y-px"
+                >
+                  {sendingEmail ? "Sending..." : "Send"}
+                </button>
+                <button
+                  onClick={closeEmailModal}
+                  className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2.5 px-4 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
