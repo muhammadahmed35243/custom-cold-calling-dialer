@@ -22,15 +22,20 @@ export async function GET(
       return NextResponse.json({ error: "Call not found" }, { status: 404 });
     }
 
+    // agent_call_status "completed" only means the agent picked up -- the
+    // call itself isn't over until the lead leg has concluded too (any
+    // terminal lead_call_status, not just "completed"; the agent chooses
+    // the actual disposition afterward regardless of how the lead leg
+    // ended).
     let status = "initiated";
-    if (call.agent_call_status === "completed" && call.lead_call_status === "completed") {
-      status = "completed";
-    } else if (call.agent_call_status === "ringing") {
+    if (call.agent_call_status === "ringing") {
       status = "ringing";
     } else if (call.agent_call_status === "no_answer") {
       status = "no_answer";
     } else if (call.agent_call_status === "failed") {
       status = "failed";
+    } else if (call.agent_call_status === "completed") {
+      status = call.lead_call_status ? "completed" : "ringing";
     }
 
     return NextResponse.json({ call, status });

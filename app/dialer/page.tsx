@@ -161,21 +161,26 @@ export default function DialerPage() {
     }
   };
 
-  const pollCallStatus = async (callId: string) => {
-    const interval = setInterval(async () => {
+  // A setInterval-based poll can fire the next request before the current
+  // one's response has come back -- if responses ever resolve out of order,
+  // a stale one can land after a fresher one and flip the UI backwards
+  // (e.g. "ringing" back to "initiated"). Self-scheduling the next poll only
+  // after the current one resolves rules that out structurally.
+  const pollCallStatus = (callId: string) => {
+    let cancelled = false;
+
+    const tick = async () => {
       const { data: { session } } = await supabaseAuth.auth.getSession();
-      if (!session) {
-        clearInterval(interval);
-        return;
-      }
+      if (!session || cancelled) return;
 
       const response = await fetch(`/api/calls/${callId}/status`, {
         headers: { "Authorization": `Bearer ${session.access_token}` },
       });
       const data = await response.json();
+      if (cancelled) return;
 
       if (["completed", "no_answer", "failed"].includes(data.status)) {
-        clearInterval(interval);
+        cancelled = true;
         setActiveCall(null);
         setCallStatus("");
         await loadLeadsAndCalls();
@@ -185,7 +190,10 @@ export default function DialerPage() {
 
       setActiveCall(data.call);
       setCallStatus(data.status);
-    }, 2000);
+      setTimeout(tick, 2000);
+    };
+
+    setTimeout(tick, 2000);
   };
 
   const toDatetimeLocal = (iso: string | null) => {
