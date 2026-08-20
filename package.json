@@ -17,6 +17,7 @@
     "autoprefixer": "^10.4.17",
     "eslint": "^8.56.0",
     "eslint-config-next": "^14.2.0",
+    "imapflow": "^1.7.1",
     "libphonenumber-js": "^1.10.58",
     "next": "^14.2.0",
     "node-fetch": "^2.7.0",
@@ -30,6 +31,7 @@
     "typescript": "^5.3.3"
   },
   "devDependencies": {
+    "@types/imapflow": "^1.0.23",
     "@types/nodemailer": "^8.0.1"
   }
 }
