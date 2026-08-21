@@ -43,7 +43,6 @@ export default function DialerPage() {
   const webrtcClientRef = useRef<any>(null);
   const webrtcCallRef = useRef<any>(null);
   const webrtcReachedActiveRef = useRef(false);
-  const webrtcRecordingStartedRef = useRef(false);
   const webrtcStartRef = useRef<number | null>(null);
   const webrtcCallerNumberRef = useRef<string | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
@@ -249,58 +248,25 @@ export default function DialerPage() {
       if (!client) return;
 
       webrtcReachedActiveRef.current = false;
-      webrtcRecordingStartedRef.current = false;
       webrtcStartRef.current = Date.now();
 
+      // The client SDK's Call object doesn't reliably expose Telnyx's
+      // server-side call_control_id (telnyxCallControlId/telnyxSessionId/
+      // telnyxLegId are populated opportunistically on certain notification
+      // types, not guaranteed present at "active"). Instead, clientState
+      // round-trips our own call row id through Telnyx's Call Control
+      // webhooks -- /api/calls/webrtc-recording reads it server-side, where
+      // call_control_id is always authoritative, and starts recording from
+      // there.
       const call = client.newCall({
         destinationNumber: lead.phone,
         callerNumber: webrtcCallerNumberRef.current || undefined,
+        clientState: btoa(callRecord.id),
         audio: true,
         remoteElement: remoteAudioRef.current || undefined,
         onNotification: (notification: any) => {
           if (notification?.type !== "callUpdate") return;
           const state = String(notification.call?.state || "").toLowerCase();
-
-          // The exact field carrying Telnyx's call ID wasn't reliable coming
-          // only from notification.call at "active" -- try every candidate
-          // field, and fall back to the ref (the definitive object from
-          // newCall(), not whatever this particular notification snapshot
-          // has) so a naming/timing mismatch doesn't silently drop it.
-          if (!webrtcRecordingStartedRef.current) {
-            const candidate =
-              notification.call?.telnyxCallControlId ||
-              notification.call?.telnyxSessionId ||
-              notification.call?.telnyxLegId ||
-              webrtcCallRef.current?.telnyxCallControlId ||
-              webrtcCallRef.current?.telnyxSessionId ||
-              webrtcCallRef.current?.telnyxLegId;
-
-            reportDebug({
-              state,
-              foundCandidate: !!candidate,
-              notificationCallKeys: notification.call ? Object.keys(notification.call) : [],
-              notificationIds: {
-                telnyxCallControlId: notification.call?.telnyxCallControlId,
-                telnyxSessionId: notification.call?.telnyxSessionId,
-                telnyxLegId: notification.call?.telnyxLegId,
-                id: notification.call?.id,
-                callId: notification.call?.callId,
-              },
-              refIds: {
-                telnyxCallControlId: webrtcCallRef.current?.telnyxCallControlId,
-                telnyxSessionId: webrtcCallRef.current?.telnyxSessionId,
-                telnyxLegId: webrtcCallRef.current?.telnyxLegId,
-                id: webrtcCallRef.current?.id,
-              },
-            });
-
-            if (candidate) {
-              webrtcRecordingStartedRef.current = true;
-              startWebrtcRecording(callRecord.id, candidate);
-            } else if (state === "active") {
-              console.warn("WebRTC: no call-control ID available yet at active state", notification.call);
-            }
-          }
 
           if (state === "active") {
             webrtcReachedActiveRef.current = true;
@@ -319,49 +285,11 @@ export default function DialerPage() {
     }
   };
 
-  // Temporary: sends WebRTC call-object diagnostics to the server so they
-  // show up in Vercel logs instead of requiring browser DevTools. Remove
-  // once the recording-linking issue is resolved.
-  const reportDebug = (data: unknown) => {
-    fetch("/api/debug-log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }).catch(() => {});
-  };
-
-  const startWebrtcRecording = async (callId: string, callControlId: string | undefined) => {
-    if (!callControlId) return;
-    try {
-      const { data: { session } } = await supabaseAuth.auth.getSession();
-      if (!session) return;
-
-      const response = await fetch(`/api/calls/${callId}/webrtc-record-start`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ callControlId }),
-      });
-
-      // A failed recording start shouldn't interrupt the call itself, but
-      // silently swallowing the error made this impossible to diagnose --
-      // log it so a failure is at least visible in the console.
-      if (!response.ok) {
-        console.error("WebRTC: failed to start recording", await response.json().catch(() => null));
-      }
-    } catch (err) {
-      console.error("WebRTC: failed to start recording", err);
-    }
-  };
-
   const finishWebrtcCall = async (callId: string) => {
     const durationSeconds = webrtcStartRef.current
       ? Math.round((Date.now() - webrtcStartRef.current) / 1000)
       : 0;
     const connected = webrtcReachedActiveRef.current;
-    const callControlId = webrtcCallRef.current?.telnyxCallControlId || null;
     webrtcCallRef.current = null;
 
     setActiveCall(null);
@@ -376,7 +304,7 @@ export default function DialerPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ connected, durationSeconds, callControlId }),
+          body: JSON.stringify({ connected, durationSeconds }),
         });
       }
     } catch {

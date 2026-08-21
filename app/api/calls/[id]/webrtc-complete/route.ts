@@ -18,8 +18,11 @@ export async function POST(
   }
 
   try {
-    const { connected, durationSeconds, callControlId } = await req.json();
+    const { connected, durationSeconds } = await req.json();
 
+    // twilio_call_sid is linked server-side by /api/calls/webrtc-recording
+    // when Telnyx's call.answered webhook arrives -- don't touch it here,
+    // or a null client-side value would wipe out that link on every hangup.
     const { error } = await supabaseServiceClient
       .from("calls")
       .update({
@@ -27,7 +30,6 @@ export async function POST(
         lead_call_status: connected ? "completed" : "no_answer",
         ended_at: new Date().toISOString(),
         duration_seconds: durationSeconds > 0 ? durationSeconds : null,
-        twilio_call_sid: callControlId || null,
       })
       .eq("id", params.id)
       .eq("agent_email", user.email);
