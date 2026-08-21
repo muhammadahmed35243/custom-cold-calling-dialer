@@ -261,13 +261,31 @@ export default function DialerPage() {
           if (notification?.type !== "callUpdate") return;
           const state = String(notification.call?.state || "").toLowerCase();
 
+          // The exact field carrying Telnyx's call ID wasn't reliable coming
+          // only from notification.call at "active" -- try every candidate
+          // field, and fall back to the ref (the definitive object from
+          // newCall(), not whatever this particular notification snapshot
+          // has) so a naming/timing mismatch doesn't silently drop it.
+          if (!webrtcRecordingStartedRef.current) {
+            const candidate =
+              notification.call?.telnyxCallControlId ||
+              notification.call?.telnyxSessionId ||
+              notification.call?.telnyxLegId ||
+              webrtcCallRef.current?.telnyxCallControlId ||
+              webrtcCallRef.current?.telnyxSessionId ||
+              webrtcCallRef.current?.telnyxLegId;
+
+            if (candidate) {
+              webrtcRecordingStartedRef.current = true;
+              startWebrtcRecording(callRecord.id, candidate);
+            } else if (state === "active") {
+              console.warn("WebRTC: no call-control ID available yet at active state", notification.call);
+            }
+          }
+
           if (state === "active") {
             webrtcReachedActiveRef.current = true;
             setCallStatus("Connected");
-            if (!webrtcRecordingStartedRef.current) {
-              webrtcRecordingStartedRef.current = true;
-              startWebrtcRecording(callRecord.id, notification.call?.telnyxCallControlId);
-            }
           } else if (["ringing", "trying", "requesting", "early", "answering"].includes(state)) {
             setCallStatus("Ringing...");
           } else if (["hangup", "destroy", "purge"].includes(state)) {
@@ -288,7 +306,7 @@ export default function DialerPage() {
       const { data: { session } } = await supabaseAuth.auth.getSession();
       if (!session) return;
 
-      await fetch(`/api/calls/${callId}/webrtc-record-start`, {
+      const response = await fetch(`/api/calls/${callId}/webrtc-record-start`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -296,8 +314,15 @@ export default function DialerPage() {
         },
         body: JSON.stringify({ callControlId }),
       });
-    } catch {
-      // Best-effort -- a failed recording start shouldn't interrupt the call
+
+      // A failed recording start shouldn't interrupt the call itself, but
+      // silently swallowing the error made this impossible to diagnose --
+      // log it so a failure is at least visible in the console.
+      if (!response.ok) {
+        console.error("WebRTC: failed to start recording", await response.json().catch(() => null));
+      }
+    } catch (err) {
+      console.error("WebRTC: failed to start recording", err);
     }
   };
 
