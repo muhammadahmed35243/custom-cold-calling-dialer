@@ -1,0 +1,37 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF9500" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#FF9500" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF9500" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#FF9500" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="360" fill="#FCFBF9"/>
+  <circle cx="1040" cy="10" r="340" fill="url(#glow1)"/>
+  <circle cx="80" cy="360" r="300" fill="url(#glow2)"/>
+
+  <!-- bolt + wordmark as ONE lockup, same relative geometry as components/Logo.tsx's
+       JetztLogo (viewBox 120x60: polygon 8,5 16,5 12,15 / rect 10,15,5,30 / text x25 y42
+       fontSize35), scaled by 58/35 and re-based so the text's own start sits at local (0,0) -->
+  <g transform="translate(411, 210)">
+    <polygon points="-28.17,-61.31 -14.91,-61.31 -21.54,-44.74" fill="#FF9500"/>
+    <rect x="-24.86" y="-44.74" width="8.29" height="49.71" fill="#FF9500"/>
+    <text x="0" y="0" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="58" font-weight="800" letter-spacing="1">
+      <tspan fill="#1a1a1a">JETZT </tspan><tspan fill="#FF9500">DIALER</tspan>
+    </text>
+  </g>
+
+  <text x="600" y="262" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="19" fill="#8a8378">
+    Now, not next quarter
+  </text>
+
+  <text x="600" y="294" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="15" fill="#a39c8f">
+    The cold-calling workspace for outbound teams
+  </text>
+
+  <rect x="0" y="356" width="1200" height="4" fill="#FF9500"/>
+</svg>
