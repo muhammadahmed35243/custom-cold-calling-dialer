@@ -275,6 +275,25 @@ export default function DialerPage() {
               webrtcCallRef.current?.telnyxSessionId ||
               webrtcCallRef.current?.telnyxLegId;
 
+            reportDebug({
+              state,
+              foundCandidate: !!candidate,
+              notificationCallKeys: notification.call ? Object.keys(notification.call) : [],
+              notificationIds: {
+                telnyxCallControlId: notification.call?.telnyxCallControlId,
+                telnyxSessionId: notification.call?.telnyxSessionId,
+                telnyxLegId: notification.call?.telnyxLegId,
+                id: notification.call?.id,
+                callId: notification.call?.callId,
+              },
+              refIds: {
+                telnyxCallControlId: webrtcCallRef.current?.telnyxCallControlId,
+                telnyxSessionId: webrtcCallRef.current?.telnyxSessionId,
+                telnyxLegId: webrtcCallRef.current?.telnyxLegId,
+                id: webrtcCallRef.current?.id,
+              },
+            });
+
             if (candidate) {
               webrtcRecordingStartedRef.current = true;
               startWebrtcRecording(callRecord.id, candidate);
@@ -298,6 +317,17 @@ export default function DialerPage() {
     } catch (error) {
       setCallStatus(`Error: ${error}`);
     }
+  };
+
+  // Temporary: sends WebRTC call-object diagnostics to the server so they
+  // show up in Vercel logs instead of requiring browser DevTools. Remove
+  // once the recording-linking issue is resolved.
+  const reportDebug = (data: unknown) => {
+    fetch("/api/debug-log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).catch(() => {});
   };
 
   const startWebrtcRecording = async (callId: string, callControlId: string | undefined) => {
