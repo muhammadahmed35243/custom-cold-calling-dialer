@@ -126,7 +126,15 @@ export default function DialerPage() {
         return;
       }
 
-      const text = await file.text();
+      // SheetJS reads .xlsx/.xls/.csv uniformly -- convert whatever the
+      // agent picked to CSV text so the upload API's contract stays the same
+      // regardless of source file type.
+      const XLSX = await import("xlsx");
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const text = XLSX.utils.sheet_to_csv(firstSheet);
+
       const response = await fetch("/api/leads/upload", {
         method: "POST",
         headers: {
@@ -733,11 +741,11 @@ export default function DialerPage() {
           ) : (
             <div className="space-y-4">
               <div>
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Upload CSV</h3>
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Upload Leads</h3>
                 <div className="flex items-center gap-4">
                   <input
                     type="file"
-                    accept=".csv"
+                    accept=".csv,.xlsx,.xls"
                     onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
                     disabled={isUploading}
                     className="text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-secondary file:text-secondary-foreground file:text-sm file:font-medium hover:file:bg-secondary/80 file:cursor-pointer"
@@ -748,7 +756,7 @@ export default function DialerPage() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">CSV format: name, phone, email (optional), company (optional), notes (optional)</p>
+                <p className="text-xs text-muted-foreground mt-2">.csv, .xlsx, or .xls -- needs a name and a phone number column (any common header names are recognized); anything else in the sheet is kept as notes</p>
               </div>
             </div>
           )}
