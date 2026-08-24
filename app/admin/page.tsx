@@ -9,8 +9,25 @@ import { Avatar } from "@/components/Avatar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAppReady } from "@/components/AppReadyContext";
 import { BrandedLoader } from "@/components/BrandedLoader";
+import { InstructionsTab } from "@/components/admin/InstructionsTab";
+import { KnowledgeBaseTab } from "@/components/admin/KnowledgeBaseTab";
+import { VoiceCallsTab } from "@/components/admin/VoiceCallsTab";
+import { InsightsTab } from "@/components/admin/InsightsTab";
+import { MessagesTab } from "@/components/admin/MessagesTab";
+import { BookingsTab } from "@/components/admin/BookingsTab";
 
 export const dynamic = "force-dynamic";
+
+type Tab = "calls" | "agents" | "voice-calls" | "instructions" | "knowledge-base" | "insights" | "messages" | "bookings";
+
+const VOICE_AGENT_TABS: { key: Tab; label: string }[] = [
+  { key: "voice-calls", label: "Voice Agent Calls" },
+  { key: "instructions", label: "Instructions" },
+  { key: "knowledge-base", label: "Knowledge Base" },
+  { key: "insights", label: "Insights" },
+  { key: "messages", label: "Messages" },
+  { key: "bookings", label: "Bookings" },
+];
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -18,7 +35,7 @@ export default function AdminDashboard() {
   const [user, setUser] = useState<any>(null);
   const [calls, setCalls] = useState<Call[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [tab, setTab] = useState<"calls" | "agents">("calls");
+  const [tab, setTab] = useState<Tab>("calls");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -103,6 +120,19 @@ export default function AdminDashboard() {
           >
             Manage Agents ({agents.length})
           </button>
+          {VOICE_AGENT_TABS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                tab === key
+                  ? "text-foreground border-brand"
+                  : "text-muted-foreground border-transparent hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {tab === "calls" && (
@@ -159,6 +189,12 @@ export default function AdminDashboard() {
         )}
 
         {tab === "agents" && <AgentManagement agents={agents} onRefresh={() => window.location.reload()} />}
+        {tab === "voice-calls" && <VoiceCallsTab />}
+        {tab === "instructions" && <InstructionsTab />}
+        {tab === "knowledge-base" && <KnowledgeBaseTab />}
+        {tab === "insights" && <InsightsTab />}
+        {tab === "messages" && <MessagesTab />}
+        {tab === "bookings" && <BookingsTab />}
       </main>
     </div>
   );
