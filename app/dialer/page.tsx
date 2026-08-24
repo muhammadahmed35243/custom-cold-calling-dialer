@@ -89,11 +89,17 @@ export default function DialerPage() {
 
   const loadLeadsAndCalls = async () => {
     // Load pending leads
+    // No explicit limit here used to mean Supabase's default 1000-row cap
+    // silently applied — with ascending order, that meant the OLDEST 1000
+    // pending leads, so anything added past that threshold could never
+    // appear at all. Explicit high limit fixes it now and won't silently
+    // reintroduce the same bug as the table grows further.
     const { data: leadsData } = await supabaseClient
       .from("leads")
       .select("*")
       .eq("status", "pending")
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .limit(10000);
 
     setLeads(leadsData || []);
     if (leadsData && leadsData.length > 0) setCurrentLead(leadsData[0]);
