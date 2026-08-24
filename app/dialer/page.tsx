@@ -14,6 +14,36 @@ import { BrandedLoader } from "@/components/BrandedLoader";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 1000;
+
+// Supabase's PostgREST enforces its own server-side row cap (db-max-rows,
+// project-level setting, defaults to 1000) that overrides any client-side
+// .limit() above it — confirmed directly: a query with limit=10000 still
+// came back truncated at 1000 rows. With 1836+ pending leads, that meant
+// the oldest 1000 always won and nothing past that ever appeared. Paging
+// through .range() works around the cap regardless of what it's set to,
+// rather than depending on a dashboard setting nobody remembers to check.
+async function fetchAllPendingLeads(): Promise<Lead[]> {
+  const all: Lead[] = [];
+  let from = 0;
+
+  while (true) {
+    const { data, error } = await supabaseClient
+      .from("leads")
+      .select("*")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error || !data) break;
+    all.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+
+  return all;
+}
+
 export default function DialerPage() {
   const router = useRouter();
   const { setReady } = useAppReady();
@@ -88,18 +118,7 @@ export default function DialerPage() {
   }, [router, setReady]);
 
   const loadLeadsAndCalls = async () => {
-    // Load pending leads
-    // No explicit limit here used to mean Supabase's default 1000-row cap
-    // silently applied — with ascending order, that meant the OLDEST 1000
-    // pending leads, so anything added past that threshold could never
-    // appear at all. Explicit high limit fixes it now and won't silently
-    // reintroduce the same bug as the table grows further.
-    const { data: leadsData } = await supabaseClient
-      .from("leads")
-      .select("*")
-      .eq("status", "pending")
-      .order("created_at", { ascending: true })
-      .limit(10000);
+    const leadsData = await fetchAllPendingLeads();
 
     setLeads(leadsData || []);
     if (leadsData && leadsData.length > 0) setCurrentLead(leadsData[0]);
