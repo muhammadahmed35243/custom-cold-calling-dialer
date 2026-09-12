@@ -12,6 +12,8 @@ out
 dist
 build
 
+docs/
+
 # Misc
 .DS_Store
 .env.local

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { csv } = await req.json();
+    const { csv, replaceExisting } = await req.json();
 
     if (!csv || typeof csv !== "string") {
       return NextResponse.json({ error: "Invalid CSV content" }, { status: 400 });
@@ -23,6 +23,23 @@ export async function POST(req: NextRequest) {
         { error: "No valid leads found", errors: parseResult.errors },
         { status: 400 }
       );
+    }
+
+    // Only clears untouched (pending) leads -- same scope as
+    // DELETE /api/leads/pending, never leads that are in_progress or
+    // already have real call history.
+    if (replaceExisting) {
+      const { error: clearError } = await supabaseServiceClient
+        .from("leads")
+        .delete()
+        .eq("status", "pending");
+
+      if (clearError) {
+        return NextResponse.json(
+          { error: `Failed to clear existing pending leads: ${clearError.message}` },
+          { status: 500 }
+        );
+      }
     }
 
     const batchId = crypto.randomUUID();

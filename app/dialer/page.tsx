@@ -55,6 +55,8 @@ export default function DialerPage() {
   const [activeCall, setActiveCall] = useState<Call | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
+  const [replaceExisting, setReplaceExisting] = useState(false);
+  const [isClearingLeads, setIsClearingLeads] = useState(false);
   const [callStatus, setCallStatus] = useState<string>("");
   const [editingCallId, setEditingCallId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({ disposition: "", notes: "", callbackAt: "" });
@@ -166,7 +168,7 @@ export default function DialerPage() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ csv: text }),
+        body: JSON.stringify({ csv: text, replaceExisting }),
       });
 
       const result = await response.json();
@@ -180,6 +182,40 @@ export default function DialerPage() {
       setUploadStatus(`✗ Error: ${error}`);
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleClearPendingLeads = async () => {
+    const pendingCount = leads.length;
+    if (!confirm(`Delete ${pendingCount} pending lead${pendingCount === 1 ? "" : "s"}? Leads already called (with history/recordings) won't be touched.`)) {
+      return;
+    }
+
+    setIsClearingLeads(true);
+    setUploadStatus("");
+    try {
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      if (!session) {
+        setUploadStatus("✗ Session expired, please login again");
+        return;
+      }
+
+      const response = await fetch("/api/leads/pending", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        setUploadStatus(`✓ Cleared ${result.deleted} pending lead${result.deleted === 1 ? "" : "s"}`);
+        loadLeadsAndCalls();
+      } else {
+        setUploadStatus(`✗ Failed to clear leads: ${result.error}`);
+      }
+    } catch (error) {
+      setUploadStatus(`✗ Error: ${error}`);
+    } finally {
+      setIsClearingLeads(false);
     }
   };
 
@@ -782,6 +818,27 @@ export default function DialerPage() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">.csv, .xlsx, or .xls -- needs a name and a phone number column (any common header names are recognized); anything else in the sheet is kept as notes</p>
+
+                <label className="flex items-center gap-2 mt-3 text-sm text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={replaceExisting}
+                    onChange={(e) => setReplaceExisting(e.target.checked)}
+                    className="rounded border-border"
+                  />
+                  Replace existing pending leads with this upload
+                </label>
+
+                <div className="mt-4 pt-4 border-t border-border">
+                  <button
+                    onClick={handleClearPendingLeads}
+                    disabled={isClearingLeads || leads.length === 0}
+                    className="text-sm bg-destructive/10 hover:bg-destructive/20 disabled:opacity-50 disabled:cursor-not-allowed text-destructive font-medium py-2 px-4 rounded-lg transition-colors"
+                  >
+                    {isClearingLeads ? "Clearing..." : `Clear Pending Leads (${leads.length})`}
+                  </button>
+                  <p className="text-xs text-muted-foreground mt-2">Only removes leads not yet called -- already-called leads and their history are never touched</p>
+                </div>
               </div>
             </div>
           )}
