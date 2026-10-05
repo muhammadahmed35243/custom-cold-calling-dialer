@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
           company: company ? company.trim() : null,
           notes: notes ? notes.trim() : null,
           status: "pending",
+          owner_email: user.email,
         },
       ])
       .select()

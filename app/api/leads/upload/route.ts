@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
       const { error: clearError } = await supabaseServiceClient
         .from("leads")
         .delete()
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .eq("owner_email", user.email);
 
       if (clearError) {
         return NextResponse.json(
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
         parseResult.validLeads.map((lead) => ({
           ...lead,
           uploaded_batch_id: batchId,
+          owner_email: user.email,
         }))
       );
 

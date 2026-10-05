@@ -16,7 +16,8 @@ export async function DELETE(req: NextRequest) {
   const { error, count } = await supabaseServiceClient
     .from("leads")
     .delete({ count: "exact" })
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .eq("owner_email", user.email);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
