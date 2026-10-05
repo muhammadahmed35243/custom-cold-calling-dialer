@@ -15,18 +15,19 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const { phone_number } = await req.json();
-    if (!phone_number) {
-      return NextResponse.json({ error: "Phone number is required" }, { status: 400 });
-    }
 
-    const phoneResult = validateAndFormatPhone(phone_number);
-    if (!phoneResult.valid || !phoneResult.formatted) {
-      return NextResponse.json({ error: phoneResult.error || "Invalid phone number" }, { status: 400 });
+    let formatted: string | null = null;
+    if (phone_number) {
+      const phoneResult = validateAndFormatPhone(phone_number);
+      if (!phoneResult.valid || !phoneResult.formatted) {
+        return NextResponse.json({ error: phoneResult.error || "Invalid phone number" }, { status: 400 });
+      }
+      formatted = phoneResult.formatted;
     }
 
     const { data, error } = await supabaseServiceClient
       .from("agents")
-      .update({ phone_number: phoneResult.formatted })
+      .update({ phone_number: formatted })
       .eq("email", user.email)
       .select()
       .single();

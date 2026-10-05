@@ -273,7 +273,7 @@ function AgentManagement({
           {
             email: newEmail,
             display_name: newName,
-            phone_number: newPhone,
+            phone_number: newPhone || null,
             alias_email: newAlias || null,
             role: "agent",
             is_active: true,
@@ -347,10 +347,9 @@ function AgentManagement({
           />
           <input
             type="tel"
-            placeholder="Phone Number (E.164: +923001234567)"
+            placeholder="Phone Number (optional, E.164: +923001234567)"
             value={newPhone}
             onChange={(e) => setNewPhone(e.target.value)}
-            required
             className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
           />
           <input

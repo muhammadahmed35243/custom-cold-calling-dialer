@@ -38,12 +38,22 @@ export async function POST(req: NextRequest) {
     .eq("email", user.email)
     .single();
 
-  if (!agent?.phone_number) {
+  if (!agent) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
   try {
     const { leadId, mode } = await req.json();
+
+    // Phone-bridge rings the agent's own phone, so it's the only mode that
+    // needs a number on file. Checked before any writes so a missing number
+    // doesn't leave the lead locked.
+    if (mode !== "webrtc" && !agent.phone_number) {
+      return NextResponse.json(
+        { error: "Add your phone number to call by phone, or use Browser mode" },
+        { status: 400 }
+      );
+    }
 
     // Get the lead
     const { data: leadData, error: leadError } = await supabaseServiceClient
