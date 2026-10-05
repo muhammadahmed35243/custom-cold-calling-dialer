@@ -15,16 +15,22 @@ export type ParseResult = {
 };
 
 // Lead sheets show up with all kinds of header names depending on the
-// source (a scraped list, a client's own spreadsheet, etc.) -- normalize
-// each header (lowercase, strip anything non-alphanumeric) and match
-// against every wording we've seen, instead of requiring the exact
-// "name, phone, email, company, notes" template.
-const HEADER_ALIASES: Record<keyof Pick<ParsedLead, "name" | "phone" | "email" | "company">, string[]> = {
-  name: ["name", "leadname", "fullname", "contactname", "businessname"],
-  phone: ["phone", "phonenumber", "mobile", "cell", "telephone", "contactnumber", "mobilenumber", "phoneno"],
-  email: ["email", "emailaddress", "contactemail"],
-  company: ["company", "niche", "business", "businesstype", "category", "industry"],
-};
+// source (a scraped list, a client's own spreadsheet, an outreach-campaign
+// template, ...) -- rather than requiring an exact header string, check
+// whether the normalized header CONTAINS one of these keywords. That
+// catches prefixed/suffixed variants ("Direct Phone Number", "Company
+// Name", "Decision Maker") that an exact-match alias list would miss.
+//
+// Order matters: company/phone/email are matched first because they use
+// more specific keywords, then name last with its broader "name"/"contact"
+// keywords -- otherwise "Company Name" or "Contact Person" would get
+// claimed by the name field before company/contact-specific logic runs.
+const HEADER_KEYWORDS: [field: keyof Pick<ParsedLead, "company" | "phone" | "email" | "name">, keywords: string[]][] = [
+  ["company", ["company", "businessname", "organization", "niche"]],
+  ["phone", ["phone", "mobile", "cell", "telephone"]],
+  ["email", ["email"]],
+  ["name", ["name", "decisionmaker", "contact"]],
+];
 
 function normalizeHeader(header: string): string {
   return header.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -52,14 +58,14 @@ export function parseCSV(csvText: string): ParseResult {
   // Map each canonical field to whichever actual header matched it, and
   // track which headers are "claimed" so anything left over can be folded
   // into notes instead of silently dropped.
-  const fieldToHeader: Partial<Record<keyof typeof HEADER_ALIASES, string>> = {};
+  const fieldToHeader: Partial<Record<"company" | "phone" | "email" | "name", string>> = {};
   const claimedHeaders = new Set<string>();
 
-  for (const header of rawHeaders) {
-    const normalized = normalizeHeader(header);
-    for (const [field, aliases] of Object.entries(HEADER_ALIASES) as [keyof typeof HEADER_ALIASES, string[]][]) {
-      if (fieldToHeader[field]) continue;
-      if (aliases.includes(normalized)) {
+  for (const [field, keywords] of HEADER_KEYWORDS) {
+    for (const header of rawHeaders) {
+      if (fieldToHeader[field] || claimedHeaders.has(header)) continue;
+      const normalized = normalizeHeader(header);
+      if (keywords.some((kw) => normalized.includes(kw))) {
         fieldToHeader[field] = header;
         claimedHeaders.add(header);
       }
