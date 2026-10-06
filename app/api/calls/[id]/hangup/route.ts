@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/api-auth";
 
-// Ends a phone-bridge call by setting its TeXML call status to completed,
-// which tears down both legs. Browser calls hang up in the SDK instead, so
-// this only handles the phone-bridge case.
+// Ends a phone-bridge call through Telnyx Call Control, which tears down both
+// legs. Browser calls hang up in the SDK instead, so this only handles the
+// phone-bridge case.
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -26,21 +26,25 @@ export async function POST(
   }
 
   const res = await fetch(
-    `https://api.telnyx.com/v2/texml/calls/${process.env.TELNYX_TEXML_CONNECTION_ID}/${call.twilio_call_sid}`,
+    `https://api.telnyx.com/v2/calls/${encodeURIComponent(call.twilio_call_sid)}/actions/hangup`,
     {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.TELNYX_API_KEY}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
       },
-      body: new URLSearchParams({ Status: "completed" }),
+      body: JSON.stringify({}),
     }
   );
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
+    const body = await res.json().catch(() => null);
+    // The call already ended on its own -- that's the outcome the agent wanted.
+    if (body?.errors?.[0]?.code === "90018") {
+      return NextResponse.json({ success: true, alreadyEnded: true });
+    }
     return NextResponse.json(
-      { error: `Hang up failed (${res.status}): ${body.slice(0, 300)}` },
+      { error: `Hang up failed (${res.status}): ${JSON.stringify(body).slice(0, 300)}` },
       { status: 502 }
     );
   }
