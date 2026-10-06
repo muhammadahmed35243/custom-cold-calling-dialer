@@ -1,4 +1,5 @@
 import { supabaseServiceClient } from "./supabase";
+import { transcribeCallRecording } from "./transcribe";
 
 export async function downloadFile(url: string, authHeader?: string): Promise<Buffer> {
   const response = await fetch(url, {
@@ -79,4 +80,6 @@ export async function saveRecordingForCall(
     .eq("id", callId);
 
   if (error) throw new Error(`Failed to update call record: ${error.message}`);
+
+  await transcribeCallRecording(callId, path);
 }

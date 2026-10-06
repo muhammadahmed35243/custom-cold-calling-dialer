@@ -106,3 +106,6 @@ export async function POST(req: NextRequest) {
     return new NextResponse(`Server error: ${error}`, { status: 500 });
   }
 }
+
+// Transcription runs inside this webhook after the recording is stored.
+export const maxDuration = 300;
