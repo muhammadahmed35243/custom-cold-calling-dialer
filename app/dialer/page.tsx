@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import type { Lead, Call } from "@/lib/supabase";
@@ -11,6 +11,7 @@ import { StatRow } from "@/components/StatRow";
 import { PencilIcon, ClockIcon, CheckIcon, XIcon, MailIcon } from "@/components/icons";
 import { useAppReady } from "@/components/AppReadyContext";
 import { BrandedLoader } from "@/components/BrandedLoader";
+import { CallDialog } from "@/components/CallDialog";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,11 @@ export default function DialerPage() {
   const [editingCallId, setEditingCallId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({ disposition: "", notes: "", callbackAt: "" });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [callNotes, setCallNotes] = useState("");
+  const [hangingUp, setHangingUp] = useState(false);
+  const [draftingEmail, setDraftingEmail] = useState(false);
+  const [openTranscriptId, setOpenTranscriptId] = useState<string | null>(null);
+  const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [emailModalCall, setEmailModalCall] = useState<Call | null>(null);
   const [emailDraft, setEmailDraft] = useState({ subject: "", body: "" });
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -384,6 +390,58 @@ export default function DialerPage() {
     startEdit({ id: callId, disposition: null, notes: null, callback_at: null } as Call);
   };
 
+  useEffect(() => {
+    setCallNotes(activeCall?.notes || "");
+  }, [activeCall?.id]);
+
+  const saveCallNotes = async (callId: string, notes: string) => {
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+    if (!session) return;
+    await fetch(`/api/calls/${callId}/notes`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ notes }),
+    }).catch(() => {});
+  };
+
+  const handleCallNotesChange = (value: string) => {
+    setCallNotes(value);
+    if (!activeCall) return;
+    const callId = activeCall.id;
+    if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
+    notesSaveTimer.current = setTimeout(() => saveCallNotes(callId, value), 800);
+  };
+
+  const handleHangUp = async () => {
+    if (!activeCall) return;
+    setHangingUp(true);
+    try {
+      if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
+      await saveCallNotes(activeCall.id, callNotes);
+
+      if (callMode === "webrtc") {
+        handleWebrtcHangup();
+        return;
+      }
+
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      if (!session) return;
+      const response = await fetch(`/api/calls/${activeCall.id}/hangup`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        setCallStatus(`Hang up failed: ${result.error || response.status}`);
+      }
+    } finally {
+      setHangingUp(false);
+    }
+  };
+
   const handleWebrtcHangup = () => {
     webrtcCallRef.current?.hangup();
   };
@@ -464,7 +522,7 @@ export default function DialerPage() {
     });
   };
 
-  const openEmailModal = (call: Call) => {
+  const openEmailModal = async (call: Call) => {
     const name = call.leads?.name || "there";
     setEmailModalCall(call);
     setEmailError(null);
@@ -472,6 +530,22 @@ export default function DialerPage() {
       subject: "Great speaking with you – JETZT",
       body: `Hi ${name},\n\nThanks for taking the time to speak with me just now. As promised, following up here -- feel free to reply to this email with any questions, or let me know a good time if you'd like to continue the conversation.\n\nBest,\nJETZT`,
     });
+
+    setDraftingEmail(true);
+    try {
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      if (!session) return;
+      const response = await fetch(`/api/calls/${call.id}/email-draft`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (response.ok) {
+        const draft = await response.json();
+        setEmailDraft({ subject: draft.subject, body: draft.body });
+      }
+    } finally {
+      setDraftingEmail(false);
+    }
   };
 
   const closeEmailModal = () => {
@@ -938,38 +1012,8 @@ export default function DialerPage() {
             )}
 
             {activeCall ? (
-              <div className="bg-card border border-border rounded-xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-sm font-semibold text-foreground">Active Call</h3>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-green-foreground">
-                    <span className="h-1.5 w-1.5 rounded-full bg-accent-green animate-pulse" />
-                    Live
-                  </span>
-                </div>
-                <div className="flex flex-col items-center text-center gap-3">
-                  <Avatar name={currentLead?.name || "lead"} size="lg" />
-                  <div>
-                    <div className="text-base font-semibold text-foreground">{currentLead?.name || "Lead"}</div>
-                    <div className="text-sm text-muted-foreground font-mono">{currentLead?.phone}</div>
-                  </div>
-                  <span className="text-sm font-medium text-brand">{callStatus}</span>
-                  {callMode === "webrtc" && (
-                    <div className="flex items-center gap-2 pt-2">
-                      <button
-                        onClick={handleWebrtcMuteToggle}
-                        className="px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors"
-                      >
-                        Mute
-                      </button>
-                      <button
-                        onClick={handleWebrtcHangup}
-                        className="px-3 py-1.5 text-sm bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors"
-                      >
-                        Hang Up
-                      </button>
-                    </div>
-                  )}
-                </div>
+              <div className="bg-card border border-border rounded-xl p-6 text-center text-sm text-muted-foreground">
+                Call in progress
               </div>
             ) : currentLead ? (
               <div className="bg-card border border-border rounded-xl p-6">
@@ -1062,7 +1106,8 @@ export default function DialerPage() {
                       calls.map((call) => {
                         const isEditing = editingCallId === call.id;
                         return (
-                          <tr key={call.id} className={isEditing ? "bg-muted/40" : "hover:bg-muted/20 transition-colors"}>
+                          <Fragment key={call.id}>
+                          <tr className={isEditing ? "bg-muted/40" : "hover:bg-muted/20 transition-colors"}>
                             <td className="px-4 py-3 align-top">
                               <div className="flex items-center gap-2.5">
                                 {call.leads?.name && <Avatar name={call.leads.name} size="sm" />}
@@ -1136,14 +1181,24 @@ export default function DialerPage() {
                             </td>
                             <td className="px-4 py-3 align-top">
                               {call.recording_url ? (
-                                <a
-                                  href={call.recording_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-foreground underline underline-offset-2 hover:no-underline text-xs whitespace-nowrap"
-                                >
-                                  Listen
-                                </a>
+                                <div className="flex flex-col gap-1">
+                                  <a
+                                    href={call.recording_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-foreground underline underline-offset-2 hover:no-underline text-xs whitespace-nowrap"
+                                  >
+                                    Listen
+                                  </a>
+                                  {call.transcript_status && (
+                                    <button
+                                      onClick={() => setOpenTranscriptId(openTranscriptId === call.id ? null : call.id)}
+                                      className="text-left text-foreground underline underline-offset-2 hover:no-underline text-xs whitespace-nowrap"
+                                    >
+                                      {openTranscriptId === call.id ? "Hide transcript" : "Transcript"}
+                                    </button>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="text-muted-foreground text-xs">-</span>
                               )}
@@ -1200,6 +1255,36 @@ export default function DialerPage() {
                               )}
                             </td>
                           </tr>
+                          {openTranscriptId === call.id && (
+                            <tr className="bg-muted/30">
+                              <td colSpan={8} className="px-6 py-4">
+                                {call.transcript_status === "ready" && call.transcript?.length ? (
+                                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                                    {call.transcript.map((u: { speaker: string; startSeconds: number; text: string }, i: number) => (
+                                      <div key={i} className="text-sm">
+                                        <span className={`font-medium ${u.speaker === "Agent" ? "text-brand" : "text-foreground"}`}>
+                                          {u.speaker}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground font-mono ml-2">
+                                          {Math.floor(u.startSeconds / 60)}:{String(u.startSeconds % 60).padStart(2, "0")}
+                                        </span>
+                                        <span className="text-foreground ml-2">{u.text}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">
+                                    {call.transcript_status === "failed"
+                                      ? "Transcription failed for this call."
+                                      : call.transcript_status === "pending"
+                                        ? "Transcribing..."
+                                        : "No transcript for this call yet."}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          )}
+                          </Fragment>
                         );
                       })
                     )}
@@ -1210,6 +1295,20 @@ export default function DialerPage() {
           </div>
         </div>
       </main>
+
+      {activeCall && (
+        <CallDialog
+          leadName={currentLead?.name || "Lead"}
+          leadPhone={currentLead?.phone || ""}
+          status={callStatus}
+          startedAt={activeCall.started_at}
+          notes={callNotes}
+          onNotesChange={handleCallNotesChange}
+          onHangUp={handleHangUp}
+          onToggleMute={callMode === "webrtc" ? handleWebrtcMuteToggle : undefined}
+          hangingUp={hangingUp}
+        />
+      )}
 
       {emailModalCall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4">
@@ -1242,6 +1341,7 @@ export default function DialerPage() {
                 className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
               />
 
+              {draftingEmail && <div className="text-xs text-muted-foreground">Drafting from this call...</div>}
               {emailError && <div className="text-sm text-destructive">{emailError}</div>}
 
               <div className="flex gap-2 pt-1">

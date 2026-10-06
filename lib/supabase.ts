@@ -71,6 +71,8 @@ export type Call = {
   recording_uploaded_at: string | null;
   recording_expires_at: string | null;
   callback_at: string | null;
+  transcript: { speaker: "Agent" | "Lead"; startSeconds: number; text: string }[] | null;
+  transcript_status: "pending" | "ready" | "failed" | null;
   created_at: string;
   updated_at: string;
   leads?: { id: string; name: string; phone: string; email: string | null } | null;
