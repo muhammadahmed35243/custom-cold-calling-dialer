@@ -81,6 +81,7 @@ export default function DialerPage() {
 
   const webrtcClientRef = useRef<any>(null);
   const webrtcCallRef = useRef<any>(null);
+  const stopStatusPollRef = useRef<(() => void) | null>(null);
   const webrtcReachedActiveRef = useRef(false);
   const webrtcStartRef = useRef<number | null>(null);
   const webrtcCallerNumberRef = useRef<string | null>(null);
@@ -437,7 +438,18 @@ export default function DialerPage() {
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
         setCallStatus(`Hang up failed: ${result.error || response.status}`);
+        return;
       }
+
+      // Telnyx accepted the hang-up, so close the dialog now rather than
+      // waiting for the lead-leg webhook to mark the call completed -- that
+      // round trip can take several seconds and made Hang Up look broken.
+      const callId = activeCall.id;
+      stopStatusPollRef.current?.();
+      setActiveCall(null);
+      setCallStatus("");
+      await loadLeadsAndCalls();
+      startEdit({ id: callId, disposition: null, notes: callNotes, callback_at: null } as Call);
     } finally {
       setHangingUp(false);
     }
@@ -465,6 +477,9 @@ export default function DialerPage() {
   // after the current one resolves rules that out structurally.
   const pollCallStatus = (callId: string) => {
     let cancelled = false;
+    stopStatusPollRef.current = () => {
+      cancelled = true;
+    };
 
     const tick = async () => {
       const { data: { session } } = await supabaseAuth.auth.getSession();
