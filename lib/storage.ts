@@ -22,7 +22,7 @@ export async function uploadRecordingToStorage(
 ): Promise<{ path: string; url: string }> {
   const { data: uploadData, error } = await supabaseServiceClient.storage
     .from(bucket)
-    .upload(path, data, { contentType });
+    .upload(path, data, { contentType, upsert: true });
 
   if (error) throw new Error(`Storage upload failed: ${error.message}`);
 
@@ -50,36 +50,68 @@ export async function getRecordingUrl(bucket: string, path: string): Promise<str
 // Shared by both recording webhook handlers (TeXML phone-bridge calls and
 // Call Control WebRTC calls) -- same download/store/record-metadata flow
 // regardless of which product generated the recording.
+//
+// Transcription runs inside the webhook request and can outlast Telnyx's
+// webhook timeout, so Telnyx retries the same recording. The call row is
+// claimed by recording SID first; a retry for an already-claimed recording
+// returns without downloading, storing, or transcribing (and billing) again.
+// Returns false when the recording was already handled.
 export async function saveRecordingForCall(
   callId: string,
   recordingUrl: string,
   recordingSid: string | null,
   downloadAuthHeader?: string
-) {
-  const recordingData = await downloadFile(recordingUrl, downloadAuthHeader);
+): Promise<boolean> {
+  if (recordingSid) {
+    const { data: claimed, error: claimError } = await supabaseServiceClient
+      .from("calls")
+      .update({ recording_sid: recordingSid })
+      .eq("id", callId)
+      .or(`recording_sid.is.null,recording_sid.neq.${recordingSid}`)
+      .select("id");
+    if (claimError) throw new Error(`Failed to claim recording: ${claimError.message}`);
+    if (!claimed?.length) return false;
+  }
 
-  const now = new Date();
-  const dateFolder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const storagePath = `${dateFolder}/call_${callId}.mp3`;
+  let path: string;
+  try {
+    const recordingData = await downloadFile(recordingUrl, downloadAuthHeader);
 
-  const { path, url: storageUrl } = await uploadRecordingToStorage("recordings", storagePath, recordingData);
+    const now = new Date();
+    const dateFolder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const storagePath = `${dateFolder}/call_${callId}.mp3`;
 
-  const expiryDate = new Date(now);
-  expiryDate.setDate(expiryDate.getDate() + 90);
+    const uploaded = await uploadRecordingToStorage("recordings", storagePath, recordingData);
+    path = uploaded.path;
 
-  const { error } = await supabaseServiceClient
-    .from("calls")
-    .update({
-      recording_sid: recordingSid,
-      recording_storage_path: path,
-      recording_url: storageUrl,
-      recording_size_bytes: recordingData.length,
-      recording_uploaded_at: new Date().toISOString(),
-      recording_expires_at: expiryDate.toISOString(),
-    })
-    .eq("id", callId);
+    const expiryDate = new Date(now);
+    expiryDate.setDate(expiryDate.getDate() + 90);
 
-  if (error) throw new Error(`Failed to update call record: ${error.message}`);
+    const { error } = await supabaseServiceClient
+      .from("calls")
+      .update({
+        recording_sid: recordingSid,
+        recording_storage_path: path,
+        recording_url: uploaded.url,
+        recording_size_bytes: recordingData.length,
+        recording_uploaded_at: new Date().toISOString(),
+        recording_expires_at: expiryDate.toISOString(),
+      })
+      .eq("id", callId);
+
+    if (error) throw new Error(`Failed to update call record: ${error.message}`);
+  } catch (err) {
+    // Release the claim so Telnyx's retry can store the recording.
+    if (recordingSid) {
+      await supabaseServiceClient
+        .from("calls")
+        .update({ recording_sid: null })
+        .eq("id", callId)
+        .eq("recording_sid", recordingSid);
+    }
+    throw err;
+  }
 
   await transcribeCallRecording(callId, path);
+  return true;
 }
