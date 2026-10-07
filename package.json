@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node -e \"const p=require('ffmpeg-static');if(!p||!require('fs').existsSync(p)){console.error('ffmpeg-static binary missing at '+p+' - its install script did not run');process.exit(1)}\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -41,5 +42,8 @@
     "@types/mailparser": "^3.4.6",
     "@types/nodemailer": "^8.0.1",
     "@types/sanitize-html": "^2.16.1"
+  },
+  "allowScripts": {
+    "ffmpeg-static@5.3.0": true
   }
 }
