@@ -287,7 +287,29 @@ export default function DialerPage() {
 
     const { TelnyxRTC } = await import("@telnyx/webrtc");
     const client = new TelnyxRTC({ login: creds.username, password: creds.password });
-    await client.connect();
+
+    // connect() only starts opening the socket -- it resolves before Telnyx
+    // has logged the client in, and a call placed before then is dropped
+    // straight away. That made the first call after every page load fail
+    // while a retry (on the by-then logged-in client) worked. Wait for
+    // telnyx.ready before handing the client out.
+    const ready = await new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => resolve(false), 15000);
+      client.on("telnyx.ready", () => {
+        clearTimeout(timer);
+        resolve(true);
+      });
+      client.on("telnyx.error", () => {
+        clearTimeout(timer);
+        resolve(false);
+      });
+      client.connect();
+    });
+    if (!ready) {
+      client.disconnect().catch(() => {});
+      setCallStatus("Couldn't connect browser calling -- hang up and try again");
+      return null;
+    }
 
     webrtcClientRef.current = client;
     return client;
@@ -326,6 +348,9 @@ export default function DialerPage() {
 
       webrtcReachedActiveRef.current = false;
       webrtcStartRef.current = Date.now();
+      // The SDK reports hangup, then destroy (and sometimes purge) for the
+      // same call -- only the first of them should finish it.
+      let finished = false;
 
       // The client SDK's Call object doesn't reliably expose Telnyx's
       // server-side call_control_id (telnyxCallControlId/telnyxSessionId/
@@ -350,7 +375,8 @@ export default function DialerPage() {
             setCallStatus("Connected");
           } else if (["ringing", "trying", "requesting", "early", "answering"].includes(state)) {
             setCallStatus("Ringing...");
-          } else if (["hangup", "destroy", "purge"].includes(state)) {
+          } else if (["hangup", "destroy", "purge"].includes(state) && !finished) {
+            finished = true;
             finishWebrtcCall(callRecord.id);
           }
         },
@@ -456,7 +482,13 @@ export default function DialerPage() {
   };
 
   const handleWebrtcHangup = () => {
-    webrtcCallRef.current?.hangup();
+    if (webrtcCallRef.current) {
+      webrtcCallRef.current.hangup();
+      return;
+    }
+    // No call was ever placed (browser calling failed to connect), so no
+    // hangup notification will come to close the dialog -- finish it here.
+    if (activeCall) finishWebrtcCall(activeCall.id);
   };
 
   const handleWebrtcMuteToggle = () => {
