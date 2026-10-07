@@ -553,7 +553,7 @@ export default function DialerPage() {
       });
       const draft = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setEmailError(`AI draft failed: ${draft.error || response.status}. Showing the default template.`);
+        setEmailError(`AI draft failed: ${draft.error || response.status}`);
         return;
       }
       setEmailDraft({ subject: draft.subject, body: draft.body });
@@ -565,7 +565,7 @@ export default function DialerPage() {
             : "No transcript for this call, so this draft uses only your notes and the call outcome."
       );
     } catch (error) {
-      setEmailError(`AI draft failed: ${error instanceof Error ? error.message : "network error"}. Showing the default template.`);
+      setEmailError(`AI draft failed: ${error instanceof Error ? error.message : "network error"}`);
     } finally {
       setDraftingEmail(false);
     }
