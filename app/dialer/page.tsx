@@ -65,6 +65,7 @@ export default function DialerPage() {
   const [callNotes, setCallNotes] = useState("");
   const [hangingUp, setHangingUp] = useState(false);
   const [draftingEmail, setDraftingEmail] = useState(false);
+  const [draftSource, setDraftSource] = useState<string | null>(null);
   const [openTranscriptId, setOpenTranscriptId] = useState<string | null>(null);
   const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [emailModalCall, setEmailModalCall] = useState<Call | null>(null);
@@ -522,30 +523,48 @@ export default function DialerPage() {
     });
   };
 
-  const openEmailModal = async (call: Call) => {
-    const name = call.leads?.name || "there";
-    setEmailModalCall(call);
-    setEmailError(null);
-    setEmailDraft({
-      subject: "Great speaking with you – JETZT",
-      body: `Hi ${name},\n\nThanks for taking the time to speak with me just now. As promised, following up here -- feel free to reply to this email with any questions, or let me know a good time if you'd like to continue the conversation.\n\nBest,\nJETZT`,
-    });
-
+  const draftEmail = async (call: Call) => {
     setDraftingEmail(true);
+    setEmailError(null);
     try {
       const { data: { session } } = await supabaseAuth.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        setEmailError("Session expired, please login again");
+        return;
+      }
       const response = await fetch(`/api/calls/${call.id}/email-draft`, {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (response.ok) {
-        const draft = await response.json();
-        setEmailDraft({ subject: draft.subject, body: draft.body });
+      const draft = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setEmailError(`AI draft failed: ${draft.error || response.status}. Showing the default template.`);
+        return;
       }
+      setEmailDraft({ subject: draft.subject, body: draft.body });
+      setDraftSource(
+        draft.usedTranscript
+          ? "AI draft based on the call transcript."
+          : draft.transcriptStatus === "pending"
+            ? "Transcript is still processing, so this draft uses only your notes. Redraft in a minute for a transcript-based email."
+            : "No transcript for this call, so this draft uses only your notes and the call outcome."
+      );
+    } catch (error) {
+      setEmailError(`AI draft failed: ${error instanceof Error ? error.message : "network error"}. Showing the default template.`);
     } finally {
       setDraftingEmail(false);
     }
+  };
+
+  const openEmailModal = (call: Call) => {
+    const name = call.leads?.name || "there";
+    setEmailModalCall(call);
+    setDraftSource(null);
+    setEmailDraft({
+      subject: "Great speaking with you – JETZT",
+      body: `Hi ${name},\n\nThanks for taking the time to speak with me just now. As promised, following up here -- feel free to reply to this email with any questions, or let me know a good time if you'd like to continue the conversation.\n\nBest,\nJETZT`,
+    });
+    draftEmail(call);
   };
 
   const closeEmailModal = () => {
@@ -1341,7 +1360,18 @@ export default function DialerPage() {
                 className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
               />
 
-              {draftingEmail && <div className="text-xs text-muted-foreground">Drafting from this call...</div>}
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-muted-foreground">
+                  {draftingEmail ? "Drafting from this call..." : draftSource}
+                </div>
+                <button
+                  onClick={() => draftEmail(emailModalCall)}
+                  disabled={draftingEmail}
+                  className="shrink-0 text-xs font-medium text-primary hover:underline disabled:opacity-50"
+                >
+                  Redraft with AI
+                </button>
+              </div>
               {emailError && <div className="text-sm text-destructive">{emailError}</div>}
 
               <div className="flex gap-2 pt-1">
