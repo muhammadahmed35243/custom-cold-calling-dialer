@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   // Get agent details
   const { data: agent } = await supabaseServiceClient
     .from("agents")
-    .select("phone_number")
+    .select("phone_number, role")
     .eq("email", user.email)
     .single();
 
@@ -62,7 +62,9 @@ export async function POST(req: NextRequest) {
       .eq("id", leadId)
       .single();
 
-    if (leadError || !leadData) {
+    // Agents may only dial leads they own; admins can dial any lead. Same
+    // 404 as a missing lead so other agents' lead IDs can't be probed.
+    if (leadError || !leadData || (agent.role !== "admin" && leadData.owner_email !== user.email)) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }
 
