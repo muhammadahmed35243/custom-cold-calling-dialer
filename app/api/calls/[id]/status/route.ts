@@ -16,6 +16,7 @@ export async function GET(
       .from("calls")
       .select("*")
       .eq("id", params.id)
+      .eq("agent_email", user.email)
       .single();
 
     if (error || !call) {
