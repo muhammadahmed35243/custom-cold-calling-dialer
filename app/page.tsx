@@ -119,6 +119,7 @@ function Homepage() {
               Talk to us
             </a>
           </div>
+          <p className="text-xs text-muted-foreground mt-4">Outbound calling to 220+ countries worldwide</p>
 
           {/* Illustrative product preview, not real data */}
           <div className="mt-16 w-full max-w-3xl bg-card border border-border rounded-2xl shadow-sm p-6 text-left">
@@ -182,10 +183,10 @@ function Homepage() {
           <div>
             <span className="text-xs font-medium text-brand bg-brand/10 px-3 py-1 rounded-full">Inbound, covered</span>
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mt-4">
-              An AI voice agent answers when your team can't
+              An AI voice agent answers when your team can&apos;t
             </h2>
             <p className="text-muted-foreground mt-4 leading-relaxed">
-              Inbound calls don't have to go to voicemail. JETZT's AI voice agent picks up,
+              Inbound calls don&apos;t have to go to voicemail. JETZT&apos;s AI voice agent picks up,
               has a real conversation with the caller, and logs it straight into the same
               admin dashboard your team already uses.
             </p>
@@ -214,7 +215,7 @@ function Homepage() {
             </div>
             <div className="space-y-2.5 text-sm bg-secondary rounded-lg p-4">
               <div><span className="font-medium text-brand">AI Voice Agent</span> <span className="text-foreground">Thanks for calling JETZT, how can I help today?</span></div>
-              <div><span className="font-medium text-foreground">Caller</span> <span className="text-foreground">I'd like a quote for my sales team.</span></div>
+              <div><span className="font-medium text-foreground">Caller</span> <span className="text-foreground">I&apos;d like a quote for my sales team.</span></div>
               <div><span className="font-medium text-brand">AI Voice Agent</span> <span className="text-foreground">Happy to help, let me grab a few details first.</span></div>
             </div>
           </div>
@@ -255,7 +256,7 @@ function Homepage() {
               Notes, transcripts, and follow-ups, handled for you
             </h2>
             <p className="text-muted-foreground mt-4 leading-relaxed">
-              Jot notes live if you want to, but you don't have to. Every recorded call is
+              Jot notes live if you want to, but you don&apos;t have to. Every recorded call is
               split by speaker and transcribed automatically, and a follow-up email is
               drafted from what was actually said, not a generic template.
             </p>
@@ -293,7 +294,7 @@ function Homepage() {
       <section className="max-w-4xl mx-auto px-6 py-24 text-center">
         <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Ready to call smarter?</h2>
         <p className="text-muted-foreground mt-3 max-w-xl mx-auto">
-          Sign in if your team is already set up, or get in touch if you're interested in JETZT Dialer.
+          Sign in if your team is already set up, or get in touch if you&apos;re interested in JETZT Dialer.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
           <Link
