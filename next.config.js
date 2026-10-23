@@ -6,10 +6,10 @@ const nextConfig = {
   // functions that transcribe recordings.
   experimental: {
     serverComponentsExternalPackages: ["ffmpeg-static"],
-  },
-  outputFileTracingIncludes: {
-    "/api/calls/recording": ["./node_modules/ffmpeg-static/**"],
-    "/api/calls/webrtc-recording": ["./node_modules/ffmpeg-static/**"],
+    outputFileTracingIncludes: {
+      "/api/calls/recording": ["./node_modules/ffmpeg-static/**"],
+      "/api/calls/webrtc-recording": ["./node_modules/ffmpeg-static/**"],
+    },
   },
 };
 
