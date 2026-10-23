@@ -144,7 +144,7 @@ function Homepage() {
                 <div className="text-lg font-semibold text-foreground">184</div>
               </div>
               <div className="bg-secondary rounded-lg p-3">
-                <div className="text-xs text-muted-foreground">Called Today</div>
+                <div className="text-xs text-muted-foreground">Called</div>
                 <div className="text-lg font-semibold text-foreground">37</div>
               </div>
               <div className="bg-secondary rounded-lg p-3">
@@ -318,7 +318,7 @@ function Homepage() {
             <JetztLogo className="h-6 w-auto" />
             <span className="text-sm text-muted-foreground">Now, not next quarter</span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
             <a href="mailto:contact@thejetzt.com" className="hover:text-foreground transition-colors">contact@thejetzt.com</a>
             <a href="mailto:support@thejetzt.com" className="hover:text-foreground transition-colors">support@thejetzt.com</a>
             <span>&copy; {new Date().getFullYear()} JETZT</span>
