@@ -65,6 +65,7 @@ export default function DialerPage() {
   const [callNotes, setCallNotes] = useState("");
   const [hangingUp, setHangingUp] = useState(false);
   const [draftingEmail, setDraftingEmail] = useState(false);
+  const [draftSource, setDraftSource] = useState<string | null>(null);
   const [openTranscriptId, setOpenTranscriptId] = useState<string | null>(null);
   const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [emailModalCall, setEmailModalCall] = useState<Call | null>(null);
@@ -80,6 +81,7 @@ export default function DialerPage() {
 
   const webrtcClientRef = useRef<any>(null);
   const webrtcCallRef = useRef<any>(null);
+  const stopStatusPollRef = useRef<(() => void) | null>(null);
   const webrtcReachedActiveRef = useRef(false);
   const webrtcStartRef = useRef<number | null>(null);
   const webrtcCallerNumberRef = useRef<string | null>(null);
@@ -285,7 +287,29 @@ export default function DialerPage() {
 
     const { TelnyxRTC } = await import("@telnyx/webrtc");
     const client = new TelnyxRTC({ login: creds.username, password: creds.password });
-    await client.connect();
+
+    // connect() only starts opening the socket -- it resolves before Telnyx
+    // has logged the client in, and a call placed before then is dropped
+    // straight away. That made the first call after every page load fail
+    // while a retry (on the by-then logged-in client) worked. Wait for
+    // telnyx.ready before handing the client out.
+    const ready = await new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => resolve(false), 15000);
+      client.on("telnyx.ready", () => {
+        clearTimeout(timer);
+        resolve(true);
+      });
+      client.on("telnyx.error", () => {
+        clearTimeout(timer);
+        resolve(false);
+      });
+      client.connect();
+    });
+    if (!ready) {
+      client.disconnect().catch(() => {});
+      setCallStatus("Couldn't connect browser calling -- hang up and try again");
+      return null;
+    }
 
     webrtcClientRef.current = client;
     return client;
@@ -324,6 +348,9 @@ export default function DialerPage() {
 
       webrtcReachedActiveRef.current = false;
       webrtcStartRef.current = Date.now();
+      // The SDK reports hangup, then destroy (and sometimes purge) for the
+      // same call -- only the first of them should finish it.
+      let finished = false;
 
       // The client SDK's Call object doesn't reliably expose Telnyx's
       // server-side call_control_id (telnyxCallControlId/telnyxSessionId/
@@ -348,7 +375,8 @@ export default function DialerPage() {
             setCallStatus("Connected");
           } else if (["ringing", "trying", "requesting", "early", "answering"].includes(state)) {
             setCallStatus("Ringing...");
-          } else if (["hangup", "destroy", "purge"].includes(state)) {
+          } else if (["hangup", "destroy", "purge"].includes(state) && !finished) {
+            finished = true;
             finishWebrtcCall(callRecord.id);
           }
         },
@@ -436,14 +464,31 @@ export default function DialerPage() {
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
         setCallStatus(`Hang up failed: ${result.error || response.status}`);
+        return;
       }
+
+      // Telnyx accepted the hang-up, so close the dialog now rather than
+      // waiting for the lead-leg webhook to mark the call completed -- that
+      // round trip can take several seconds and made Hang Up look broken.
+      const callId = activeCall.id;
+      stopStatusPollRef.current?.();
+      setActiveCall(null);
+      setCallStatus("");
+      await loadLeadsAndCalls();
+      startEdit({ id: callId, disposition: null, notes: callNotes, callback_at: null } as Call);
     } finally {
       setHangingUp(false);
     }
   };
 
   const handleWebrtcHangup = () => {
-    webrtcCallRef.current?.hangup();
+    if (webrtcCallRef.current) {
+      webrtcCallRef.current.hangup();
+      return;
+    }
+    // No call was ever placed (browser calling failed to connect), so no
+    // hangup notification will come to close the dialog -- finish it here.
+    if (activeCall) finishWebrtcCall(activeCall.id);
   };
 
   const handleWebrtcMuteToggle = () => {
@@ -464,6 +509,9 @@ export default function DialerPage() {
   // after the current one resolves rules that out structurally.
   const pollCallStatus = (callId: string) => {
     let cancelled = false;
+    stopStatusPollRef.current = () => {
+      cancelled = true;
+    };
 
     const tick = async () => {
       const { data: { session } } = await supabaseAuth.auth.getSession();
@@ -522,30 +570,48 @@ export default function DialerPage() {
     });
   };
 
-  const openEmailModal = async (call: Call) => {
-    const name = call.leads?.name || "there";
-    setEmailModalCall(call);
-    setEmailError(null);
-    setEmailDraft({
-      subject: "Great speaking with you – JETZT",
-      body: `Hi ${name},\n\nThanks for taking the time to speak with me just now. As promised, following up here -- feel free to reply to this email with any questions, or let me know a good time if you'd like to continue the conversation.\n\nBest,\nJETZT`,
-    });
-
+  const draftEmail = async (call: Call) => {
     setDraftingEmail(true);
+    setEmailError(null);
     try {
       const { data: { session } } = await supabaseAuth.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        setEmailError("Session expired, please login again");
+        return;
+      }
       const response = await fetch(`/api/calls/${call.id}/email-draft`, {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (response.ok) {
-        const draft = await response.json();
-        setEmailDraft({ subject: draft.subject, body: draft.body });
+      const draft = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setEmailError(`AI draft failed: ${draft.error || response.status}`);
+        return;
       }
+      setEmailDraft({ subject: draft.subject, body: draft.body });
+      setDraftSource(
+        draft.usedTranscript
+          ? "AI draft based on the call transcript."
+          : draft.transcriptStatus === "pending"
+            ? "Transcript is still processing, so this draft uses only your notes. Redraft in a minute for a transcript-based email."
+            : "No transcript for this call, so this draft uses only your notes and the call outcome."
+      );
+    } catch (error) {
+      setEmailError(`AI draft failed: ${error instanceof Error ? error.message : "network error"}`);
     } finally {
       setDraftingEmail(false);
     }
+  };
+
+  const openEmailModal = (call: Call) => {
+    const name = call.leads?.name || "there";
+    setEmailModalCall(call);
+    setDraftSource(null);
+    setEmailDraft({
+      subject: "Great speaking with you – JETZT",
+      body: `Hi ${name},\n\nThanks for taking the time to speak with me just now. As promised, following up here -- feel free to reply to this email with any questions, or let me know a good time if you'd like to continue the conversation.\n\nBest,\nJETZT`,
+    });
+    draftEmail(call);
   };
 
   const closeEmailModal = () => {
@@ -1341,7 +1407,18 @@ export default function DialerPage() {
                 className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
               />
 
-              {draftingEmail && <div className="text-xs text-muted-foreground">Drafting from this call...</div>}
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-muted-foreground">
+                  {draftingEmail ? "Drafting from this call..." : draftSource}
+                </div>
+                <button
+                  onClick={() => draftEmail(emailModalCall)}
+                  disabled={draftingEmail}
+                  className="shrink-0 text-xs font-medium text-primary hover:underline disabled:opacity-50"
+                >
+                  Redraft with AI
+                </button>
+              </div>
               {emailError && <div className="text-sm text-destructive">{emailError}</div>}
 
               <div className="flex gap-2 pt-1">

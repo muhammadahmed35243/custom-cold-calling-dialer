@@ -25,13 +25,17 @@ export async function POST(
 
   const { data: call } = await supabaseServiceClient
     .from("calls")
-    .select("disposition, notes, transcript, leads(name, company)")
+    .select("disposition, notes, transcript, transcript_status, leads(name, company)")
     .eq("id", params.id)
     .eq("agent_email", user.email)
     .single();
 
   if (!call) {
     return NextResponse.json({ error: "Call not found" }, { status: 404 });
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json({ error: "OPENAI_API_KEY is not configured" }, { status: 500 });
   }
 
   const lead = Array.isArray(call.leads) ? call.leads[0] : call.leads;
@@ -59,9 +63,11 @@ export async function POST(
           role: "system",
           content:
             "You write short, warm follow-up sales emails from a salesperson at JETZT to a prospect after a phone call. " +
-            "Reference specifics from the call notes or transcript when there are any. Keep it under 120 words, plain and human, " +
-            "with one clear next step. Do not invent facts that aren't in the context. Respond with JSON: {\"subject\": string, \"body\": string}. " +
-            "End the body with a sign-off line of 'JETZT'.",
+            "When a transcript is provided, base the email on it: recap what the prospect actually said (their needs, objections, " +
+            "questions, and anything the agent promised to send or do), and make the next step match what was agreed on the call. " +
+            "Otherwise use the agent's notes and call outcome. Write a subject specific to this conversation, not a generic one. " +
+            "Keep it under 150 words, plain and human, with one clear next step. Do not invent facts that aren't in the context. " +
+            "Respond with JSON: {\"subject\": string, \"body\": string}. End the body with a sign-off line of 'JETZT'.",
         },
         { role: "user", content: context },
       ],
@@ -76,7 +82,23 @@ export async function POST(
     );
   }
 
-  const completion = await res.json();
-  const parsed = JSON.parse(completion.choices[0].message.content);
-  return NextResponse.json({ subject: parsed.subject, body: parsed.body });
+  let parsed: { subject?: unknown; body?: unknown };
+  try {
+    const completion = await res.json();
+    parsed = JSON.parse(completion.choices[0].message.content);
+  } catch (err) {
+    console.error("email-draft: unparseable model response", err);
+    return NextResponse.json({ error: "AI returned an unreadable draft, try again" }, { status: 502 });
+  }
+  if (typeof parsed.subject !== "string" || typeof parsed.body !== "string") {
+    return NextResponse.json({ error: "AI returned an incomplete draft, try again" }, { status: 502 });
+  }
+
+  return NextResponse.json({
+    subject: parsed.subject,
+    body: parsed.body,
+    // Lets the UI say whether the draft came from the transcript or only notes.
+    usedTranscript: Boolean(transcript),
+    transcriptStatus: call.transcript_status ?? null,
+  });
 }
