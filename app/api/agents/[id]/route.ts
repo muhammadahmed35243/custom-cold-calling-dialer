@@ -32,6 +32,7 @@ export async function PATCH(
   const updates: Record<string, unknown> = {};
   if ("is_active" in body) updates.is_active = body.is_active;
   if ("alias_email" in body) updates.alias_email = body.alias_email || null;
+  if ("outbound_phone_number_id" in body) updates.outbound_phone_number_id = body.outbound_phone_number_id || null;
 
   const { error } = await supabaseServiceClient
     .from("agents")

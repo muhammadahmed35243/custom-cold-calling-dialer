@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     // Get the call record to find the lead's phone number
     const { data: callRecord, error: callError } = await supabaseServiceClient
       .from("calls")
-      .select("lead_id")
+      .select("lead_id, agent_email")
       .eq("id", callRecordId)
       .single();
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     // Build TeXML to dial the lead
     const recordingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/calls/recording`;
     const dialStatusUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/calls/dial-status?callRecordId=${callRecordId}`;
-    const texml = buildComplianceAndDialTeXML(lead.phone, recordingUrl, dialStatusUrl);
+    const texml = await buildComplianceAndDialTeXML(lead.phone, recordingUrl, dialStatusUrl, callRecord.agent_email);
 
     return new NextResponse(texml, {
       headers: { "Content-Type": "application/xml" },

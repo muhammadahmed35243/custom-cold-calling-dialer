@@ -32,8 +32,21 @@ export type Agent = {
   role: "admin" | "agent";
   is_active: boolean;
   alias_email: string | null;
+  outbound_phone_number_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type PhoneNumber = {
+  id: string;
+  phone_number: string;
+  telnyx_id: string;
+  country_code: string;
+  monthly_cost: number | null;
+  upfront_cost: number | null;
+  is_active: boolean;
+  purchased_by: string;
+  purchased_at: string;
 };
 
 export type Lead = {

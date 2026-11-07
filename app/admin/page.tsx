@@ -15,10 +15,12 @@ import { VoiceCallsTab } from "@/components/admin/VoiceCallsTab";
 import { InsightsTab } from "@/components/admin/InsightsTab";
 import { MessagesTab } from "@/components/admin/MessagesTab";
 import { BookingsTab } from "@/components/admin/BookingsTab";
+import { PhoneNumbersTab } from "@/components/admin/PhoneNumbersTab";
+import type { PhoneNumber } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-type Tab = "calls" | "agents" | "voice-calls" | "instructions" | "knowledge-base" | "insights" | "messages" | "bookings";
+type Tab = "calls" | "agents" | "phone-numbers" | "voice-calls" | "instructions" | "knowledge-base" | "insights" | "messages" | "bookings";
 
 const VOICE_AGENT_TABS: { key: Tab; label: string }[] = [
   { key: "voice-calls", label: "Voice Agent Calls" },
@@ -120,6 +122,16 @@ export default function AdminDashboard() {
           >
             Manage Agents ({agents.length})
           </button>
+          <button
+            onClick={() => setTab("phone-numbers")}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              tab === "phone-numbers"
+                ? "text-foreground border-brand"
+                : "text-muted-foreground border-transparent hover:text-foreground"
+            }`}
+          >
+            Phone Numbers
+          </button>
           {VOICE_AGENT_TABS.map(({ key, label }) => (
             <button
               key={key}
@@ -189,6 +201,7 @@ export default function AdminDashboard() {
         )}
 
         {tab === "agents" && <AgentManagement agents={agents} onRefresh={() => window.location.reload()} />}
+        {tab === "phone-numbers" && <PhoneNumbersTab />}
         {tab === "voice-calls" && <VoiceCallsTab />}
         {tab === "instructions" && <InstructionsTab />}
         {tab === "knowledge-base" && <KnowledgeBaseTab />}
@@ -216,6 +229,7 @@ function AgentManagement({
   const [busyAgentId, setBusyAgentId] = useState<string | null>(null);
   const [editingAliasId, setEditingAliasId] = useState<string | null>(null);
   const [aliasDraft, setAliasDraft] = useState("");
+  const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
 
   const authedFetch = async (url: string, options: RequestInit = {}) => {
     const { data: { session } } = await supabaseAuth.auth.getSession();
@@ -228,6 +242,33 @@ function AgentManagement({
         ...options.headers,
       },
     });
+  };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await authedFetch("/api/admin/phone-numbers");
+        if (res.ok) setPhoneNumbers((await res.json()).numbers || []);
+      } catch {
+        // Non-critical -- the dropdown just won't offer specific numbers if this fails.
+      }
+    })();
+  }, []);
+
+  const handleAssignNumber = async (agent: Agent, numberId: string) => {
+    setBusyAgentId(agent.id);
+    try {
+      const response = await authedFetch(`/api/agents/${agent.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ outbound_phone_number_id: numberId || null }),
+      });
+      if (response.ok) onRefresh();
+      else setError((await response.json()).error || "Failed to assign number");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to assign number");
+    } finally {
+      setBusyAgentId(null);
+    }
   };
 
   const handleToggleActive = async (agent: Agent) => {
@@ -378,6 +419,7 @@ function AgentManagement({
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Email</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Phone</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Mailbox Alias</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Outbound Number</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">Actions</th>
             </tr>
@@ -425,6 +467,19 @@ function AgentManagement({
                       {agent.alias_email || <span className="italic">Set alias</span>}
                     </button>
                   )}
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  <select
+                    value={agent.outbound_phone_number_id || ""}
+                    onChange={(e) => handleAssignNumber(agent, e.target.value)}
+                    disabled={busyAgentId === agent.id}
+                    className="px-2 py-1 border border-border rounded-md bg-background text-foreground text-xs disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                  >
+                    <option value="">Default (active number)</option>
+                    {phoneNumbers.map((n) => (
+                      <option key={n.id} value={n.id}>{n.phone_number}</option>
+                    ))}
+                  </select>
                 </td>
                 <td className="px-6 py-4 text-sm">
                   <StatusBadge status={agent.is_active ? "active" : "inactive"} />

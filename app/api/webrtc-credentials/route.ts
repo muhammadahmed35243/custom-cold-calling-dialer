@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getOutboundNumberForAgent } from "@/lib/telnyx";
 
 // Serves the WebRTC SIP login behind our existing auth wall instead of
 // baking it into the public JS bundle via NEXT_PUBLIC_ -- anyone who can
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { TELNYX_WEBRTC_USERNAME, TELNYX_WEBRTC_PASSWORD, TELNYX_PHONE_NUMBER } = process.env;
+  const { TELNYX_WEBRTC_USERNAME, TELNYX_WEBRTC_PASSWORD } = process.env;
   if (!TELNYX_WEBRTC_USERNAME || !TELNYX_WEBRTC_PASSWORD) {
     return NextResponse.json({ error: "WebRTC calling is not configured" }, { status: 503 });
   }
@@ -30,6 +31,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     username: TELNYX_WEBRTC_USERNAME,
     password: TELNYX_WEBRTC_PASSWORD,
-    callerNumber: TELNYX_PHONE_NUMBER,
+    callerNumber: await getOutboundNumberForAgent(user.email),
   });
 }

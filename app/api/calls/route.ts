@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 
     // Now call Telnyx
     try {
-      const providerCall = await initiateCall(agent.phone_number, callRecord.id);
+      const providerCall = await initiateCall(agent.phone_number, callRecord.id, user.email);
 
       // Update call record with the provider's call SID
       const { error: updateError } = await supabaseServiceClient
