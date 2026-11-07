@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { BrandedLoader } from "./BrandedLoader";
 import { useAppReady } from "./AppReadyContext";
+
+// Plain text pages that should show immediately, with no brand splash.
+const NO_SPLASH_PATHS = ["/privacy", "/terms"];
 
 // Every page's own auth-check/data-load runs on its own schedule -- a bare
 // 2s timer meant the splash could disappear before that finished, dropping
@@ -16,6 +20,7 @@ import { useAppReady } from "./AppReadyContext";
 // state, without this minimum-wait floor.
 export function SplashScreen() {
   const { ready } = useAppReady();
+  const pathname = usePathname();
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [safetyElapsed, setSafetyElapsed] = useState(false);
 
@@ -28,7 +33,7 @@ export function SplashScreen() {
     };
   }, []);
 
-  const isVisible = !((minTimeElapsed && ready) || safetyElapsed);
+  const isVisible = !NO_SPLASH_PATHS.includes(pathname) && !((minTimeElapsed && ready) || safetyElapsed);
 
   if (!isVisible) return null;
 

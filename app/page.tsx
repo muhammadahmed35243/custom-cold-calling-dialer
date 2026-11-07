@@ -321,6 +321,8 @@ function Homepage() {
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
             <a href="mailto:contact@thejetzt.com" className="hover:text-foreground transition-colors">contact@thejetzt.com</a>
             <a href="mailto:support@thejetzt.com" className="hover:text-foreground transition-colors">support@thejetzt.com</a>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
             <span>&copy; {new Date().getFullYear()} JETZT</span>
           </div>
         </div>
