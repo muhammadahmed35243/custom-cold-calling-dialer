@@ -16,6 +16,7 @@ import { InsightsTab } from "@/components/admin/InsightsTab";
 import { MessagesTab } from "@/components/admin/MessagesTab";
 import { BookingsTab } from "@/components/admin/BookingsTab";
 import { PhoneNumbersTab } from "@/components/admin/PhoneNumbersTab";
+import { authedFetch } from "@/lib/voice-agent/authedFetch";
 import type { PhoneNumber } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -65,21 +66,15 @@ export default function AdminDashboard() {
 
       setUser(authUser);
 
-      // Load all calls
-      const { data: callsData } = await supabaseClient
-        .from("calls")
-        .select("*")
-        .order("created_at", { ascending: false });
+      // Through server routes rather than direct table reads: the database
+      // only lets a browser read its own agent row, not everyone's.
+      const [callsRes, agentsRes] = await Promise.all([
+        authedFetch("/api/admin/calls"),
+        authedFetch("/api/agents"),
+      ]);
+      if (callsRes.ok) setCalls((await callsRes.json()).calls || []);
+      if (agentsRes.ok) setAgents((await agentsRes.json()).agents || []);
 
-      setCalls(callsData || []);
-
-      // Load all agents
-      const { data: agentsData } = await supabaseClient
-        .from("agents")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      setAgents(agentsData || []);
       setLoading(false);
       setReady();
     };
@@ -231,19 +226,6 @@ function AgentManagement({
   const [aliasDraft, setAliasDraft] = useState("");
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
 
-  const authedFetch = async (url: string, options: RequestInit = {}) => {
-    const { data: { session } } = await supabaseAuth.auth.getSession();
-    if (!session) throw new Error("Session expired, please login again");
-    return fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-        ...options.headers,
-      },
-    });
-  };
-
   useEffect(() => {
     (async () => {
       try {
@@ -308,20 +290,18 @@ function AgentManagement({
     setError(null);
 
     try {
-      const { error: insertError } = await supabaseClient
-        .from("agents")
-        .insert([
-          {
-            email: newEmail,
-            display_name: newName,
-            phone_number: newPhone || null,
-            alias_email: newAlias || null,
-            role: "agent",
-            is_active: true,
-          },
-        ]);
-
-      if (insertError) throw insertError;
+      const response = await authedFetch("/api/agents", {
+        method: "POST",
+        body: JSON.stringify({
+          email: newEmail,
+          display_name: newName,
+          phone_number: newPhone || null,
+          alias_email: newAlias || null,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error((await response.json()).error || "Failed to add agent");
+      }
 
       setNewEmail("");
       setNewName("");
