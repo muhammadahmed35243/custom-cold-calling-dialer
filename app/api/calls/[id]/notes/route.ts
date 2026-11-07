@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getActor } from "@/lib/authz";
 
 // Saves call notes while the call is still in progress. Unlike /disposition,
 // this doesn't touch the lead's queue status.
@@ -8,10 +8,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
 
   const { notes } = await req.json();
 
@@ -19,7 +17,7 @@ export async function PATCH(
     .from("calls")
     .update({ notes: typeof notes === "string" ? notes : null })
     .eq("id", params.id)
-    .eq("agent_email", user.email);
+    .eq("agent_email", actor.email);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

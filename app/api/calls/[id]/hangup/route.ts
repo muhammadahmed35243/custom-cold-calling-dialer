@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getActor } from "@/lib/authz";
 
 // Ends a phone-bridge call through Telnyx Call Control, which tears down both
 // legs. Browser calls hang up in the SDK instead, so this only handles the
@@ -9,16 +9,14 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
 
   const { data: call } = await supabaseServiceClient
     .from("calls")
     .select("twilio_call_sid")
     .eq("id", params.id)
-    .eq("agent_email", user.email)
+    .eq("agent_email", actor.email)
     .single();
 
   if (!call?.twilio_call_sid) {

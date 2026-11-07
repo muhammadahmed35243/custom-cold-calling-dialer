@@ -18,6 +18,7 @@ export async function PATCH(
     .from("insights")
     .select("*")
     .eq("id", params.id)
+    .eq("org_id", auth.orgId)
     .single();
 
   if (fetchError || !insight) {
@@ -35,6 +36,7 @@ export async function PATCH(
       .from("agent_config")
       .select("value")
       .eq("key", "core_instructions")
+      .eq("org_id", auth.orgId)
       .single();
 
     const merged = current?.value ? `${current.value}\n${insight.content}` : insight.content;
@@ -42,7 +44,7 @@ export async function PATCH(
     const { error: updateError } = await supabaseServiceClient
       .from("agent_config")
       .upsert(
-        { key: "core_instructions", value: merged, updated_at: new Date().toISOString() },
+        { key: "core_instructions", value: merged, org_id: auth.orgId, updated_at: new Date().toISOString() },
         { onConflict: "key" }
       );
 
@@ -55,7 +57,8 @@ export async function PATCH(
       status: action === "approve" ? "approved" : "rejected",
       resolved_at: new Date().toISOString(),
     })
-    .eq("id", params.id);
+    .eq("id", params.id)
+    .eq("org_id", auth.orgId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import { useAppReady } from "@/components/AppReadyContext";
 import { BrandedLoader } from "@/components/BrandedLoader";
+import { isAdminRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default function AuthCallbackPage() {
           .single();
 
         if (agent) {
-          if (agent.role === "admin") {
+          if (isAdminRole(agent.role)) {
             router.push("/dashboard");
           } else {
             router.push("/dialer");

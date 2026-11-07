@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getActor } from "@/lib/authz";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
 
   try {
     const { disposition, notes, callbackAt } = await req.json();
@@ -18,7 +16,7 @@ export async function POST(
       .from("calls")
       .select("*")
       .eq("id", params.id)
-      .eq("agent_email", user.email)
+      .eq("agent_email", actor.email)
       .single();
 
     if (callError || !call) {
@@ -67,6 +65,8 @@ export async function POST(
         .from("leads")
         .select("*")
         .eq("status", "pending")
+        .eq("org_id", actor.orgId)
+        .eq("owner_email", actor.email)
         .order("created_at", { ascending: true })
         .limit(1);
 

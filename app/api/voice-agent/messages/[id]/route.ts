@@ -12,7 +12,8 @@ export async function PATCH(
   const { error } = await supabaseServiceClient
     .from("fallback_messages")
     .update({ status: "responded" })
-    .eq("id", params.id);
+    .eq("id", params.id)
+    .eq("org_id", auth.orgId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });

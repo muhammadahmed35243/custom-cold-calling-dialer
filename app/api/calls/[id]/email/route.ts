@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getActor } from "@/lib/authz";
 import { sendMail } from "@/lib/mailer";
+import { orgHasMailbox, NO_MAILBOX_MESSAGE } from "@/lib/mail-access";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
+
+  // Follow-ups go out through the shared JETZT mailbox, which other
+  // organizations must not send from.
+  if (!orgHasMailbox(actor)) {
+    return NextResponse.json({ error: NO_MAILBOX_MESSAGE }, { status: 503 });
   }
 
   try {
@@ -22,7 +27,7 @@ export async function POST(
       .from("calls")
       .select("*, leads(email)")
       .eq("id", params.id)
-      .eq("agent_email", user.email)
+      .eq("agent_email", actor.email)
       .single();
 
     if (callError || !call) {

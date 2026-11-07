@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getActor } from "@/lib/authz";
 
 // Deletes only untouched leads (status='pending'). Leads currently
 // in_progress (someone's mid-call) or already called/callback (real
@@ -8,16 +8,15 @@ import { getAuthenticatedUser } from "@/lib/api-auth";
 // pending lead has no calls row yet (that's only created once someone
 // actually dials it), so this delete never cascades into call history.
 export async function DELETE(req: NextRequest) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
 
   const { error, count } = await supabaseServiceClient
     .from("leads")
     .delete({ count: "exact" })
     .eq("status", "pending")
-    .eq("owner_email", user.email);
+    .eq("org_id", actor.orgId)
+    .eq("owner_email", actor.email);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

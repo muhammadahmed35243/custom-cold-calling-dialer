@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getActor } from "@/lib/authz";
 
 const MAX_TRANSCRIPT_CHARS = 12000;
 
@@ -18,16 +18,14 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
 
   const { data: call } = await supabaseServiceClient
     .from("calls")
     .select("disposition, notes, transcript, transcript_status, leads(name, company)")
     .eq("id", params.id)
-    .eq("agent_email", user.email)
+    .eq("agent_email", actor.email)
     .single();
 
   if (!call) {
@@ -40,6 +38,8 @@ export async function POST(
 
   const lead = Array.isArray(call.leads) ? call.leads[0] : call.leads;
   const transcript = transcriptToText(call.transcript as Utterance[] | null);
+  // The email is signed by the caller's own company, not always JETZT.
+  const companyName = actor.org.name.replace(/["\\]/g, "");
 
   const context = [
     `Lead name: ${lead?.name || "unknown"}`,
@@ -62,12 +62,12 @@ export async function POST(
         {
           role: "system",
           content:
-            "You write short, warm follow-up sales emails from a salesperson at JETZT to a prospect after a phone call. " +
+            `You write short, warm follow-up sales emails from a salesperson at ${companyName} to a prospect after a phone call. ` +
             "When a transcript is provided, base the email on it: recap what the prospect actually said (their needs, objections, " +
             "questions, and anything the agent promised to send or do), and make the next step match what was agreed on the call. " +
             "Otherwise use the agent's notes and call outcome. Write a subject specific to this conversation, not a generic one. " +
             "Keep it under 150 words, plain and human, with one clear next step. Do not invent facts that aren't in the context. " +
-            "Respond with JSON: {\"subject\": string, \"body\": string}. End the body with a sign-off line of 'JETZT'.",
+            `Respond with JSON: {"subject": string, "body": string}. End the body with a sign-off line of '${companyName}'.`,
         },
         { role: "user", content: context },
       ],

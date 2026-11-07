@@ -29,10 +29,11 @@ export type Agent = {
   email: string;
   phone_number: string;
   display_name: string;
-  role: "admin" | "agent";
+  role: "super_admin" | "admin" | "agent";
   is_active: boolean;
   alias_email: string | null;
   outbound_phone_number_id: string | null;
+  org_id: string;
   created_at: string;
   updated_at: string;
 };
@@ -47,6 +48,7 @@ export type PhoneNumber = {
   is_active: boolean;
   purchased_by: string;
   purchased_at: string;
+  org_id: string;
 };
 
 export type Lead = {
@@ -59,6 +61,9 @@ export type Lead = {
   status: "pending" | "in_progress" | "called" | "callback";
   assigned_agent: string | null;
   uploaded_batch_id: string | null;
+  // Optional: the dialer builds partial leads from call rows.
+  owner_email?: string | null;
+  org_id?: string;
   created_at: string;
   updated_at: string;
 };
@@ -86,6 +91,7 @@ export type Call = {
   callback_at: string | null;
   transcript: { speaker: "Agent" | "Lead"; startSeconds: number; text: string }[] | null;
   transcript_status: "pending" | "ready" | "failed" | null;
+  org_id: string;
   created_at: string;
   updated_at: string;
   leads?: { id: string; name: string; phone: string; email: string | null } | null;

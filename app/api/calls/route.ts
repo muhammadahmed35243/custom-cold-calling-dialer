@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-auth";
-import { initiateCall } from "@/lib/telnyx";
+import { getActor } from "@/lib/authz";
+import { initiateCall, getOutboundNumberForAgent } from "@/lib/telnyx";
 
 export async function GET(req: NextRequest) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
 
   // Joined via service role: the leads RLS policy only allows reading
   // status='pending' rows, which would silently drop the name/phone for
@@ -15,7 +13,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabaseServiceClient
     .from("calls")
     .select("*, leads(id, name, phone, email)")
-    .eq("agent_email", user.email)
+    .eq("agent_email", actor.email)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -26,16 +24,13 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
 
-  // Get agent details
   const { data: agent } = await supabaseServiceClient
     .from("agents")
-    .select("phone_number, role")
-    .eq("email", user.email)
+    .select("phone_number")
+    .eq("id", actor.agentId)
     .single();
 
   if (!agent) {
@@ -55,6 +50,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Same reason: fail before any writes if the org has no caller ID.
+    try {
+      await getOutboundNumberForAgent(actor.email);
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 400 });
+    }
+
     // Get the lead
     const { data: leadData, error: leadError } = await supabaseServiceClient
       .from("leads")
@@ -62,9 +64,15 @@ export async function POST(req: NextRequest) {
       .eq("id", leadId)
       .single();
 
-    // Agents may only dial leads they own; admins can dial any lead. Same
-    // 404 as a missing lead so other agents' lead IDs can't be probed.
-    if (leadError || !leadData || (agent.role !== "admin" && leadData.owner_email !== user.email)) {
+    // Agents may only dial leads they own; admins can dial any lead in their
+    // own organization. Same 404 as a missing lead so other agents' or
+    // organizations' lead IDs can't be probed.
+    const isAdmin = actor.role === "admin" || actor.role === "super_admin";
+    const allowed =
+      !!leadData &&
+      leadData.org_id === actor.orgId &&
+      (isAdmin || leadData.owner_email === actor.email);
+    if (leadError || !allowed) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }
 
@@ -74,7 +82,8 @@ export async function POST(req: NextRequest) {
       .insert([
         {
           lead_id: leadId,
-          agent_email: user.email,
+          agent_email: actor.email,
+          org_id: actor.orgId,
           started_at: new Date().toISOString(),
         },
       ])
@@ -93,7 +102,7 @@ export async function POST(req: NextRequest) {
       .from("leads")
       .update({
         status: "in_progress",
-        assigned_agent: user.email,
+        assigned_agent: actor.email,
       })
       .eq("id", leadId);
 
@@ -114,7 +123,7 @@ export async function POST(req: NextRequest) {
 
     // Now call Telnyx
     try {
-      const providerCall = await initiateCall(agent.phone_number, callRecord.id, user.email);
+      const providerCall = await initiateCall(agent.phone_number, callRecord.id, actor.email);
 
       // Update call record with the provider's call SID
       const { error: updateError } = await supabaseServiceClient

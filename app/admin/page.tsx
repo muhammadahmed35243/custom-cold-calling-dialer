@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseAuth, supabaseClient } from "@/lib/supabase";
+import { supabaseAuth } from "@/lib/supabase";
 import type { Agent, Call } from "@/lib/supabase";
 import { AppHeader } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
@@ -18,8 +18,20 @@ import { BookingsTab } from "@/components/admin/BookingsTab";
 import { PhoneNumbersTab } from "@/components/admin/PhoneNumbersTab";
 import { authedFetch } from "@/lib/voice-agent/authedFetch";
 import type { PhoneNumber } from "@/lib/supabase";
+import { isAdminRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
+
+type Me = {
+  email: string;
+  role: string;
+  canBuyNumbers: boolean;
+  org: { id: string; name: string; voiceAssistantEnabled: boolean };
+};
+
+// The organization this page shows: the admin's own, or for the super admin,
+// any organization opened from the console (/admin?orgId=...).
+type ViewedOrg = { id: string; name: string; voiceAssistantEnabled: boolean; isOwn: boolean };
 
 type Tab = "calls" | "agents" | "phone-numbers" | "voice-calls" | "instructions" | "knowledge-base" | "insights" | "messages" | "bookings";
 
@@ -40,6 +52,9 @@ export default function AdminDashboard() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [tab, setTab] = useState<Tab>("calls");
   const [loading, setLoading] = useState(true);
+  const [me, setMe] = useState<Me | null>(null);
+  const [viewedOrg, setViewedOrg] = useState<ViewedOrg | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -51,26 +66,52 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Check if admin
-      const { data: agent } = await supabaseClient
-        .from("agents")
-        .select("*")
-        .eq("email", authUser.email)
-        .single();
+      const fail = (message: string) => {
+        setUser(authUser);
+        setLoadError(message);
+        setLoading(false);
+        setReady();
+      };
 
-      if (!agent || agent.role !== "admin") {
+      const meRes = await authedFetch("/api/me");
+      const meBody = await meRes.json().catch(() => ({}));
+      if (!meRes.ok) return fail(meBody.error || "Couldn't load your account");
+
+      if (!isAdminRole(meBody.role)) {
         router.push("/dialer");
         setReady();
         return;
       }
 
       setUser(authUser);
+      setMe(meBody);
+
+      let org: ViewedOrg = {
+        id: meBody.org.id,
+        name: meBody.org.name,
+        voiceAssistantEnabled: meBody.org.voiceAssistantEnabled,
+        isOwn: true,
+      };
+      const requestedOrgId = new URLSearchParams(window.location.search).get("orgId");
+      if (meBody.role === "super_admin" && requestedOrgId && requestedOrgId !== meBody.org.id) {
+        const orgRes = await authedFetch(`/api/super-admin/organizations/${encodeURIComponent(requestedOrgId)}`);
+        const orgBody = await orgRes.json().catch(() => ({}));
+        if (!orgRes.ok) return fail(orgBody.error || "Organization not found");
+        org = {
+          id: orgBody.organization.id,
+          name: orgBody.organization.name,
+          voiceAssistantEnabled: orgBody.organization.voice_assistant_enabled,
+          isOwn: false,
+        };
+      }
+      setViewedOrg(org);
+      const orgQuery = org.isOwn ? "" : `?orgId=${encodeURIComponent(org.id)}`;
 
       // Through server routes rather than direct table reads: the database
       // only lets a browser read its own agent row, not everyone's.
       const [callsRes, agentsRes] = await Promise.all([
-        authedFetch("/api/admin/calls"),
-        authedFetch("/api/agents"),
+        authedFetch(`/api/admin/calls${orgQuery}`),
+        authedFetch(`/api/agents${orgQuery}`),
       ]);
       if (callsRes.ok) setCalls((await callsRes.json()).calls || []);
       if (agentsRes.ok) setAgents((await agentsRes.json()).agents || []);
@@ -82,6 +123,8 @@ export default function AdminDashboard() {
     checkAuth();
   }, [router, setReady]);
 
+  const orgQuery = viewedOrg && !viewedOrg.isOwn ? `?orgId=${encodeURIComponent(viewedOrg.id)}` : "";
+
   const handleSignOut = async () => {
     await supabaseAuth.auth.signOut();
     router.push("/auth/login");
@@ -91,12 +134,41 @@ export default function AdminDashboard() {
     return <BrandedLoader />;
   }
 
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AppHeader userEmail={user?.email} role={me?.role} onSignOut={handleSignOut} />
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+            {loadError}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader userEmail={user?.email} isAdmin onSignOut={handleSignOut} />
+      <AppHeader userEmail={user?.email} role={me?.role} onSignOut={handleSignOut} />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex gap-1 mb-6 border-b border-border">
+        {viewedOrg && !viewedOrg.isOwn ? (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand/30 bg-brand/10 px-4 py-3 text-sm text-foreground">
+            <span>
+              Managing <strong>{viewedOrg.name}</strong> as super admin. Changes here apply to that organization.
+            </span>
+            <button
+              onClick={() => router.push("/super-admin")}
+              className="font-medium underline underline-offset-2 hover:no-underline"
+            >
+              All organizations
+            </button>
+          </div>
+        ) : (
+          viewedOrg && <h1 className="text-lg font-semibold text-foreground mb-4 tracking-tight">{viewedOrg.name}</h1>
+        )}
+
+        <div className="flex gap-1 mb-6 border-b border-border overflow-x-auto">
           <button
             onClick={() => setTab("calls")}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
@@ -127,7 +199,7 @@ export default function AdminDashboard() {
           >
             Phone Numbers
           </button>
-          {VOICE_AGENT_TABS.map(({ key, label }) => (
+          {viewedOrg?.voiceAssistantEnabled && VOICE_AGENT_TABS.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -195,8 +267,15 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {tab === "agents" && <AgentManagement agents={agents} onRefresh={() => window.location.reload()} />}
-        {tab === "phone-numbers" && <PhoneNumbersTab />}
+        {tab === "agents" && (
+          <AgentManagement
+            agents={agents}
+            orgQuery={orgQuery}
+            currentEmail={user?.email}
+            onRefresh={() => window.location.reload()}
+          />
+        )}
+        {tab === "phone-numbers" && <PhoneNumbersTab orgQuery={orgQuery} canBuy={!!me?.canBuyNumbers} />}
         {tab === "voice-calls" && <VoiceCallsTab />}
         {tab === "instructions" && <InstructionsTab />}
         {tab === "knowledge-base" && <KnowledgeBaseTab />}
@@ -210,9 +289,13 @@ export default function AdminDashboard() {
 
 function AgentManagement({
   agents,
+  orgQuery,
+  currentEmail,
   onRefresh,
 }: {
   agents: Agent[];
+  orgQuery: string;
+  currentEmail?: string;
   onRefresh: () => void;
 }) {
   const [newEmail, setNewEmail] = useState("");
@@ -229,13 +312,13 @@ function AgentManagement({
   useEffect(() => {
     (async () => {
       try {
-        const res = await authedFetch("/api/admin/phone-numbers");
+        const res = await authedFetch(`/api/admin/phone-numbers${orgQuery}`);
         if (res.ok) setPhoneNumbers((await res.json()).numbers || []);
       } catch {
         // Non-critical -- the dropdown just won't offer specific numbers if this fails.
       }
     })();
-  }, []);
+  }, [orgQuery]);
 
   const handleAssignNumber = async (agent: Agent, numberId: string) => {
     setBusyAgentId(agent.id);
@@ -290,7 +373,7 @@ function AgentManagement({
     setError(null);
 
     try {
-      const response = await authedFetch("/api/agents", {
+      const response = await authedFetch(`/api/agents${orgQuery}`, {
         method: "POST",
         body: JSON.stringify({
           email: newEmail,
@@ -411,6 +494,11 @@ function AgentManagement({
                   <div className="flex items-center gap-2.5">
                     <Avatar name={agent.display_name} size="sm" />
                     {agent.display_name}
+                    {agent.role !== "agent" && (
+                      <span className="text-[11px] font-medium bg-secondary text-muted-foreground px-1.5 py-0.5 rounded-md">
+                        {agent.role === "super_admin" ? "Super admin" : "Admin"}
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-muted-foreground">{agent.email}</td>
@@ -465,6 +553,9 @@ function AgentManagement({
                   <StatusBadge status={agent.is_active ? "active" : "inactive"} />
                 </td>
                 <td className="px-6 py-4 text-sm text-right whitespace-nowrap">
+                  {/* Nobody can deactivate or delete themselves or the super admin. */}
+                  {agent.role !== "super_admin" && agent.email !== currentEmail && (
+                  <>
                   <button
                     onClick={() => handleToggleActive(agent)}
                     disabled={busyAgentId === agent.id}
@@ -479,6 +570,8 @@ function AgentManagement({
                   >
                     Delete
                   </button>
+                  </>
+                  )}
                 </td>
               </tr>
             ))}

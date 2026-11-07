@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabaseServiceClient
     .from("insights")
     .select("*")
+    .eq("org_id", auth.orgId)
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

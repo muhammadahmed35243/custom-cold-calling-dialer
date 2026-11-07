@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/voice-agent/admin-auth";
+import { requireRole, canBuyNumbers, ADMIN_ROLES, BUY_NUMBERS_BLOCKED_MESSAGE } from "@/lib/authz";
 import { searchAvailableNumbers } from "@/lib/telnyx";
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin(req);
-  if (auth.error) return auth.error;
+  const { actor, error: authError } = await requireRole(req, ADMIN_ROLES);
+  if (authError) return authError;
+
+  // Search results show JETZT's own cost from Telnyx, so they're limited to
+  // whoever can buy at that price.
+  if (!canBuyNumbers(actor)) {
+    return NextResponse.json({ error: BUY_NUMBERS_BLOCKED_MESSAGE }, { status: 403 });
+  }
 
   const countryCode = req.nextUrl.searchParams.get("country");
   const areaCode = req.nextUrl.searchParams.get("areaCode") || undefined;

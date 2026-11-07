@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabaseServiceClient
     .from("agent_config")
     .select("key, value, updated_at")
+    .eq("org_id", auth.orgId)
     .in("key", ["core_instructions", "timely_info"]);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -26,7 +27,7 @@ export async function PATCH(req: NextRequest) {
 
   const { error } = await supabaseServiceClient
     .from("agent_config")
-    .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    .upsert({ key, value, org_id: auth.orgId, updated_at: new Date().toISOString() }, { onConflict: "key" });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });

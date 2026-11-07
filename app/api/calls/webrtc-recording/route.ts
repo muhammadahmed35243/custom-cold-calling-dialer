@@ -19,6 +19,15 @@ function decodeClientState(clientState: string | undefined): string | null {
   return /^[0-9a-f-]{36}$/i.test(clientState) ? clientState : null;
 }
 
+// Digits of a phone number, also accepting a SIP URI ("sip:+1555...@host").
+function phoneDigits(value: string | null | undefined): string {
+  return (value || "").split("@")[0].replace(/\D/g, "");
+}
+
+// A WebRTC call row is linked within moments of being created; anything
+// older is not the call this webhook is about.
+const LINK_WINDOW_MS = 15 * 60 * 1000;
+
 // Call Control webhooks are JSON (unlike TeXML's form-encoded body), but
 // signed the same account-wide Ed25519 way -- verifyTelnyxSignature is
 // shared with the TeXML recording handler.
@@ -47,10 +56,43 @@ export async function POST(req: NextRequest) {
         return new NextResponse("Missing call id or call_control_id", { status: 200 });
       }
 
+      // client_state is set by the browser, so on its own it would let any
+      // signed-in caller attach their call (and its recording) to someone
+      // else's call row. Only link a row that isn't linked yet, was created
+      // moments ago, and whose lead is the number Telnyx actually dialed.
+      const { data: callRow } = await supabaseServiceClient
+        .from("calls")
+        .select("id, twilio_call_sid, created_at, leads(phone)")
+        .eq("id", callId)
+        .single();
+
+      if (callRow?.twilio_call_sid === callControlId) {
+        // A retried webhook for a call that's already linked and recording.
+        return new NextResponse("OK", { status: 200 });
+      }
+
+      const lead = Array.isArray(callRow?.leads) ? callRow?.leads[0] : callRow?.leads;
+      const dialed = phoneDigits(payload.to);
+      const isRecent =
+        !!callRow && Date.now() - new Date(callRow.created_at).getTime() < LINK_WINDOW_MS;
+      if (
+        !callRow ||
+        callRow.twilio_call_sid ||
+        !isRecent ||
+        (dialed && phoneDigits(lead?.phone) !== dialed)
+      ) {
+        console.warn("WebRTC: call.answered doesn't match its call row, not linking", {
+          callId,
+          to: payload.to,
+        });
+        return new NextResponse("Call row doesn't match", { status: 200 });
+      }
+
       await supabaseServiceClient
         .from("calls")
         .update({ twilio_call_sid: callControlId })
-        .eq("id", callId);
+        .eq("id", callId)
+        .is("twilio_call_sid", null);
 
       try {
         await startCallControlRecording(callControlId);

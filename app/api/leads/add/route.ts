@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getActor } from "@/lib/authz";
 import { validateAndFormatPhone } from "@/lib/phone";
 
 export async function POST(req: NextRequest) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
 
   try {
     const { name, phone, email, company, notes } = await req.json();
@@ -40,7 +38,8 @@ export async function POST(req: NextRequest) {
           company: company ? company.trim() : null,
           notes: notes ? notes.trim() : null,
           status: "pending",
-          owner_email: user.email,
+          owner_email: actor.email,
+          org_id: actor.orgId,
         },
       ])
       .select()

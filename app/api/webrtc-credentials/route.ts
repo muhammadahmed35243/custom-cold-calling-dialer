@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseServiceClient } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getActor } from "@/lib/authz";
 import { getOutboundNumberForAgent } from "@/lib/telnyx";
 
 // Serves the WebRTC SIP login behind our existing auth wall instead of
@@ -8,29 +7,24 @@ import { getOutboundNumberForAgent } from "@/lib/telnyx";
 // reach /dialer's static assets could otherwise extract it, regardless of
 // whether they pass our client-side auth check.
 export async function GET(req: NextRequest) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: agent } = await supabaseServiceClient
-    .from("agents")
-    .select("is_active")
-    .eq("email", user.email)
-    .single();
-
-  if (!agent || !agent.is_active) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
 
   const { TELNYX_WEBRTC_USERNAME, TELNYX_WEBRTC_PASSWORD } = process.env;
   if (!TELNYX_WEBRTC_USERNAME || !TELNYX_WEBRTC_PASSWORD) {
     return NextResponse.json({ error: "WebRTC calling is not configured" }, { status: 503 });
   }
 
+  let callerNumber: string;
+  try {
+    callerNumber = await getOutboundNumberForAgent(actor.email);
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 400 });
+  }
+
   return NextResponse.json({
     username: TELNYX_WEBRTC_USERNAME,
     password: TELNYX_WEBRTC_PASSWORD,
-    callerNumber: await getOutboundNumberForAgent(user.email),
+    callerNumber,
   });
 }

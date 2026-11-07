@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getActor } from "@/lib/authz";
 import { validateAndFormatPhone } from "@/lib/phone";
 
 // Self-service: an agent can change their own phone_number (the number
@@ -8,10 +8,8 @@ import { validateAndFormatPhone } from "@/lib/phone";
 // admin panel. Deliberately doesn't touch role/is_active/alias_email --
 // those stay admin-only, unlike the full /api/agents/[id] route.
 export async function PATCH(req: NextRequest) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
 
   try {
     const { phone_number } = await req.json();
@@ -28,7 +26,7 @@ export async function PATCH(req: NextRequest) {
     const { data, error } = await supabaseServiceClient
       .from("agents")
       .update({ phone_number: formatted })
-      .eq("email", user.email)
+      .eq("email", actor.email)
       .select()
       .single();
 

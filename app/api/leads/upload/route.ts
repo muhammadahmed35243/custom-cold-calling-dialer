@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getActor } from "@/lib/authz";
 import { parseCSV } from "@/lib/csv-parser";
 
 export async function POST(req: NextRequest) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
 
   try {
     const { csv, replaceExisting } = await req.json();
@@ -33,7 +31,8 @@ export async function POST(req: NextRequest) {
         .from("leads")
         .delete()
         .eq("status", "pending")
-        .eq("owner_email", user.email);
+        .eq("org_id", actor.orgId)
+        .eq("owner_email", actor.email);
 
       if (clearError) {
         return NextResponse.json(
@@ -50,7 +49,8 @@ export async function POST(req: NextRequest) {
         parseResult.validLeads.map((lead) => ({
           ...lead,
           uploaded_batch_id: batchId,
-          owner_email: user.email,
+          owner_email: actor.email,
+          org_id: actor.orgId,
         }))
       );
 

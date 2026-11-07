@@ -49,7 +49,7 @@ export default function DialerPage() {
   const router = useRouter();
   const { setReady } = useAppReady();
   const [user, setUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
@@ -118,7 +118,7 @@ export default function DialerPage() {
 
       setUser(authUser);
       setMyPhoneNumber(agent.phone_number || "");
-      setIsAdmin(agent.role === "admin");
+      setRole(agent.role);
       loadLeadsAndCalls();
       setLoading(false);
       setReady();
@@ -849,7 +849,7 @@ export default function DialerPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader userEmail={user?.email} isAdmin={isAdmin} onSignOut={handleSignOut} />
+      <AppHeader userEmail={user?.email} role={role} onSignOut={handleSignOut} />
       {/* Remote audio for browser (WebRTC) calls -- never rendered visibly */}
       <audio ref={remoteAudioRef} autoPlay className="hidden" />
 

@@ -6,6 +6,7 @@ import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import { JetztLogo } from "@/components/Logo";
 import { useAppReady } from "@/components/AppReadyContext";
 import { BrandedLoader } from "@/components/BrandedLoader";
+import { isAdminRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export default function DashboardSelector() {
   const router = useRouter();
   const { setReady } = useAppReady();
   const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,13 +33,14 @@ export default function DashboardSelector() {
         .eq("email", authUser.email)
         .single();
 
-      if (!agent || agent.role !== "admin") {
+      if (!agent || !isAdminRole(agent.role)) {
         router.push("/dialer");
         setReady();
         return;
       }
 
       setUser(authUser);
+      setRole(agent.role);
       setLoading(false);
       setReady();
     };
@@ -89,6 +92,22 @@ export default function DashboardSelector() {
                 <span className="ml-1.5">→</span>
               </div>
             </button>
+
+            {role === "super_admin" && (
+              <button
+                onClick={() => router.push("/super-admin")}
+                className="group md:col-span-2 p-6 bg-card border border-border rounded-xl hover:border-foreground/20 hover:shadow-sm transition-all text-left"
+              >
+                <h2 className="text-lg font-semibold text-foreground mb-1.5">Super Admin</h2>
+                <p className="text-sm text-muted-foreground mb-5">
+                  Create organizations for sub admins and set their budgets, pricing, limits and features
+                </p>
+                <div className="flex items-center text-foreground text-sm font-medium group-hover:translate-x-1 transition-transform">
+                  <span>Manage organizations</span>
+                  <span className="ml-1.5">→</span>
+                </div>
+              </button>
+            )}
           </div>
 
           <div className="mt-8 pt-6 border-t border-border">

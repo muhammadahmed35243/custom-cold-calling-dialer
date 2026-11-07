@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabaseServiceClient
     .from("voice_agent_calls")
     .select("*")
+    .eq("org_id", auth.orgId)
     .order("started_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

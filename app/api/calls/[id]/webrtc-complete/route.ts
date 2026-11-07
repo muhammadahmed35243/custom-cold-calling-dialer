@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getActor } from "@/lib/authz";
 
 // WebRTC calls have no separate "agent leg" the way phone-bridge calls do --
 // the agent's own audio IS the browser, connected the moment they're logged
@@ -12,10 +12,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { user } = await getAuthenticatedUser(req);
-  if (!user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { actor, error: authError } = await getActor(req);
+  if (authError) return authError;
 
   try {
     const { connected, durationSeconds } = await req.json();
@@ -32,7 +30,7 @@ export async function POST(
         duration_seconds: durationSeconds > 0 ? durationSeconds : null,
       })
       .eq("id", params.id)
-      .eq("agent_email", user.email);
+      .eq("agent_email", actor.email);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

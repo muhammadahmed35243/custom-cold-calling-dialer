@@ -2,22 +2,25 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { Logo } from "./Logo";
+import { isAdminRole } from "@/lib/roles";
 
 export function AppHeader({
   userEmail,
-  isAdmin,
+  role,
   onSignOut,
 }: {
   userEmail?: string;
-  isAdmin: boolean;
+  role?: string | null;
   onSignOut: () => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const isAdmin = isAdminRole(role);
 
   const navItems = [
     { label: "Dialer", href: "/dialer" },
     ...(isAdmin ? [{ label: "Admin", href: "/admin" }] : []),
+    ...(role === "super_admin" ? [{ label: "Super Admin", href: "/super-admin" }] : []),
     { label: "Mail", href: "/mail" },
   ];
 

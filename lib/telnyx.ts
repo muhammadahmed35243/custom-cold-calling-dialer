@@ -1,16 +1,16 @@
 import nacl from "tweetnacl";
 import { supabaseServiceClient } from "./supabase";
+import { FOUNDING_ORG_ID } from "./authz";
 
 // Which number an agent's outbound calls show as caller ID. Checks, in
-// order: a number an admin specifically assigned to this agent, then
-// whichever purchased number is marked active, then the original
-// TELNYX_PHONE_NUMBER env var -- so agents keep working on today's
-// single-number setup until an admin assigns something through the new
-// phone-numbers admin UI.
+// order: a number an admin specifically assigned to this agent, then the
+// number marked active in the agent's own organization, then (founding org
+// only) the original TELNYX_PHONE_NUMBER env var. Other organizations never
+// fall back to JETZT's number.
 export async function getOutboundNumberForAgent(agentEmail: string): Promise<string> {
   const { data: agent } = await supabaseServiceClient
     .from("agents")
-    .select("outbound_phone_number_id, phone_numbers:outbound_phone_number_id(phone_number)")
+    .select("org_id, outbound_phone_number_id, phone_numbers:outbound_phone_number_id(phone_number)")
     .eq("email", agentEmail)
     .single();
 
@@ -18,14 +18,22 @@ export async function getOutboundNumberForAgent(agentEmail: string): Promise<str
   const assignedNumber = Array.isArray(assigned) ? assigned[0]?.phone_number : assigned?.phone_number;
   if (assignedNumber) return assignedNumber;
 
-  const { data: active } = await supabaseServiceClient
-    .from("phone_numbers")
-    .select("phone_number")
-    .eq("is_active", true)
-    .single();
-  if (active?.phone_number) return active.phone_number;
+  const orgId = agent?.org_id as string | undefined;
+  if (orgId) {
+    const { data: active } = await supabaseServiceClient
+      .from("phone_numbers")
+      .select("phone_number")
+      .eq("org_id", orgId)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (active?.phone_number) return active.phone_number;
+  }
 
-  return process.env.TELNYX_PHONE_NUMBER!;
+  if (orgId === FOUNDING_ORG_ID && process.env.TELNYX_PHONE_NUMBER) {
+    return process.env.TELNYX_PHONE_NUMBER;
+  }
+
+  throw new Error("No outbound number is set up for your organization yet. Ask your admin to buy or assign one.");
 }
 
 // Telnyx's TeXML Calls API is a Twilio-Calls-API-compatible endpoint: same

@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 import { useAppReady } from "@/components/AppReadyContext";
 import { BrandedLoader } from "@/components/BrandedLoader";
+import { isAdminRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -118,7 +119,7 @@ export default function MailPage() {
 
   useEffect(() => {
     if (!agentInfo) return;
-    const hasMailbox = agentInfo.role === "admin" || !!agentInfo.alias_email;
+    const hasMailbox = isAdminRole(agentInfo.role) || !!agentInfo.alias_email;
     if (hasMailbox) loadMessages(folder);
     // loadMessages is stable enough for this purpose; including it would
     // require wrapping in useCallback for no real benefit here.
@@ -187,11 +188,11 @@ export default function MailPage() {
     return <BrandedLoader />;
   }
 
-  const hasMailbox = agentInfo?.role === "admin" || !!agentInfo?.alias_email;
+  const hasMailbox = isAdminRole(agentInfo?.role) || !!agentInfo?.alias_email;
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader userEmail={user?.email} isAdmin={agentInfo?.role === "admin"} onSignOut={handleSignOut} />
+      <AppHeader userEmail={user?.email} role={agentInfo?.role} onSignOut={handleSignOut} />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {!hasMailbox ? (
@@ -222,7 +223,7 @@ export default function MailPage() {
                   </button>
                 ))}
               </div>
-              {agentInfo?.role === "admin" && (
+              {isAdminRole(agentInfo?.role) && (
                 <p className="text-xs text-muted-foreground px-1">Viewing all mail (admin)</p>
               )}
             </div>

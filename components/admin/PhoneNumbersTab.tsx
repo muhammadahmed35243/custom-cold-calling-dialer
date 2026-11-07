@@ -16,7 +16,10 @@ function formatCost(n: number | null) {
   return n === null ? "-" : `$${n.toFixed(2)}`;
 }
 
-export function PhoneNumbersTab() {
+// orgQuery is "?orgId=..." when the super admin manages another organization,
+// empty otherwise. canBuy hides buying (and Telnyx's own prices) from
+// organizations that can't buy numbers themselves yet.
+export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: string; canBuy?: boolean }) {
   const [owned, setOwned] = useState<PhoneNumber[]>([]);
   const [loadingOwned, setLoadingOwned] = useState(true);
   const [country, setCountry] = useState("US");
@@ -31,7 +34,7 @@ export function PhoneNumbersTab() {
   const loadOwned = async () => {
     setLoadingOwned(true);
     try {
-      const res = await authedFetch("/api/admin/phone-numbers");
+      const res = await authedFetch(`/api/admin/phone-numbers${orgQuery}`);
       const body = await res.json();
       if (res.ok) setOwned(body.numbers || []);
       else setError(body.error || "Failed to load numbers");
@@ -70,7 +73,7 @@ export function PhoneNumbersTab() {
     setPurchasing(true);
     setError(null);
     try {
-      const res = await authedFetch("/api/admin/phone-numbers/purchase", {
+      const res = await authedFetch(`/api/admin/phone-numbers/purchase${orgQuery}`, {
         method: "POST",
         body: JSON.stringify({
           phoneNumber: confirming.phoneNumber,
@@ -115,6 +118,12 @@ export function PhoneNumbersTab() {
         </div>
       )}
 
+      {!canBuy ? (
+        <div className="bg-card border border-border rounded-xl p-6">
+          <h2 className="text-sm font-semibold text-foreground mb-1">Need a number?</h2>
+          <p className="text-sm text-muted-foreground">Ask JETZT to add a phone number to your organization.</p>
+        </div>
+      ) : (
       <div className="bg-card border border-border rounded-xl p-6">
         <h2 className="text-sm font-semibold text-foreground mb-1">Buy a Number</h2>
         <p className="text-xs text-muted-foreground mb-4">
@@ -179,6 +188,7 @@ export function PhoneNumbersTab() {
           </div>
         )}
       </div>
+      )}
 
       {confirming && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
@@ -227,7 +237,9 @@ export function PhoneNumbersTab() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Number</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Country</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Cost</th>
+                {canBuy && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Cost</th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Purchased</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">Active</th>
               </tr>
@@ -237,7 +249,9 @@ export function PhoneNumbersTab() {
                 <tr key={n.id} className="hover:bg-muted/50 transition-colors">
                   <td className="px-6 py-4 text-sm text-foreground font-mono">{n.phone_number}</td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">{n.country_code}</td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">{formatCost(n.monthly_cost)}/mo</td>
+                  {canBuy && (
+                    <td className="px-6 py-4 text-sm text-muted-foreground">{formatCost(n.monthly_cost)}/mo</td>
+                  )}
                   <td className="px-6 py-4 text-sm text-muted-foreground">{new Date(n.purchased_at).toLocaleDateString()}</td>
                   <td className="px-6 py-4 text-sm text-right">
                     {n.is_active ? (
