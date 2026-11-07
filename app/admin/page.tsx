@@ -125,6 +125,17 @@ export default function AdminDashboard() {
 
   const orgQuery = viewedOrg && !viewedOrg.isOwn ? `?orgId=${encodeURIComponent(viewedOrg.id)}` : "";
 
+  // Re-reads just the agent list after a change, so the page stays put on the
+  // Manage Agents tab instead of reloading the whole app.
+  const refreshAgents = async () => {
+    try {
+      const res = await authedFetch(`/api/agents${orgQuery}`);
+      if (res.ok) setAgents((await res.json()).agents || []);
+    } catch {
+      // Keep showing the current list; the next change or page load refreshes it.
+    }
+  };
+
   const handleSignOut = async () => {
     await supabaseAuth.auth.signOut();
     router.push("/auth/login");
@@ -272,7 +283,7 @@ export default function AdminDashboard() {
             agents={agents}
             orgQuery={orgQuery}
             currentEmail={user?.email}
-            onRefresh={() => window.location.reload()}
+            onRefresh={refreshAgents}
           />
         )}
         {tab === "phone-numbers" && <PhoneNumbersTab orgQuery={orgQuery} canBuy={!!me?.canBuyNumbers} />}
@@ -296,7 +307,7 @@ function AgentManagement({
   agents: Agent[];
   orgQuery: string;
   currentEmail?: string;
-  onRefresh: () => void;
+  onRefresh: () => Promise<void>;
 }) {
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
@@ -321,13 +332,14 @@ function AgentManagement({
   }, [orgQuery]);
 
   const handleAssignNumber = async (agent: Agent, numberId: string) => {
+    setError(null);
     setBusyAgentId(agent.id);
     try {
       const response = await authedFetch(`/api/agents/${agent.id}`, {
         method: "PATCH",
         body: JSON.stringify({ outbound_phone_number_id: numberId || null }),
       });
-      if (response.ok) onRefresh();
+      if (response.ok) await onRefresh();
       else setError((await response.json()).error || "Failed to assign number");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to assign number");
@@ -337,13 +349,14 @@ function AgentManagement({
   };
 
   const handleToggleActive = async (agent: Agent) => {
+    setError(null);
     setBusyAgentId(agent.id);
     try {
       const response = await authedFetch(`/api/agents/${agent.id}`, {
         method: "PATCH",
         body: JSON.stringify({ is_active: !agent.is_active }),
       });
-      if (response.ok) onRefresh();
+      if (response.ok) await onRefresh();
       else setError((await response.json()).error || "Failed to update agent");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update agent");
@@ -355,10 +368,11 @@ function AgentManagement({
   const handleDeleteAgent = async (agent: Agent) => {
     if (!window.confirm(`Delete ${agent.display_name} (${agent.email})? This cannot be undone.`)) return;
 
+    setError(null);
     setBusyAgentId(agent.id);
     try {
       const response = await authedFetch(`/api/agents/${agent.id}`, { method: "DELETE" });
-      if (response.ok) onRefresh();
+      if (response.ok) await onRefresh();
       else setError((await response.json()).error || "Failed to delete agent");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete agent");
@@ -390,7 +404,7 @@ function AgentManagement({
       setNewName("");
       setNewPhone("");
       setNewAlias("");
-      onRefresh();
+      await onRefresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add agent");
     } finally {
@@ -409,6 +423,7 @@ function AgentManagement({
   };
 
   const saveAlias = async (agent: Agent) => {
+    setError(null);
     setBusyAgentId(agent.id);
     try {
       const response = await authedFetch(`/api/agents/${agent.id}`, {
@@ -417,7 +432,7 @@ function AgentManagement({
       });
       if (response.ok) {
         cancelEditAlias();
-        onRefresh();
+        await onRefresh();
       } else {
         setError((await response.json()).error || "Failed to update alias");
       }
