@@ -365,6 +365,16 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
+// In most browsers the mouse wheel over a focused number box changes its
+// value, which is how a scroll can silently turn "no limit" into 0. Drop the
+// focus instead so the wheel scrolls the form.
+function blurNumberInputOnWheel(e: React.WheelEvent) {
+  const target = e.target as HTMLElement;
+  if (target instanceof HTMLInputElement && target.type === "number" && document.activeElement === target) {
+    target.blur();
+  }
+}
+
 const inputClass =
   "w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring disabled:opacity-50";
 
@@ -443,12 +453,15 @@ function OrgFormDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-foreground/40 p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
+      {/* The title and buttons stay put; only the settings in between scroll,
+          so Save is always reachable however short the window is. */}
       <form
         onSubmit={save}
-        className="w-full max-w-2xl bg-card border border-border rounded-2xl shadow-lg p-6 space-y-6 my-8"
+        onWheel={blurNumberInputOnWheel}
+        className="w-full max-w-2xl max-h-full flex flex-col bg-card border border-border rounded-2xl shadow-lg"
       >
-        <div>
+        <div className="px-6 pt-6 pb-4 border-b border-border">
           <h2 className="text-base font-semibold text-foreground">
             {isNew ? "New organization" : `Settings for ${org.name}`}
           </h2>
@@ -459,6 +472,7 @@ function OrgFormDialog({
           )}
         </div>
 
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-5 space-y-6">
         <Section title="Organization">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="sm:col-span-2">
@@ -561,11 +575,14 @@ function OrgFormDialog({
           </div>
         </Section>
 
+        </div>
+
+        <div className="px-6 py-4 border-t border-border space-y-3">
         {error && (
           <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">{error}</div>
         )}
 
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-2">
           <button
             type="submit"
             disabled={saving}
@@ -581,6 +598,7 @@ function OrgFormDialog({
           >
             Cancel
           </button>
+        </div>
         </div>
       </form>
     </div>
