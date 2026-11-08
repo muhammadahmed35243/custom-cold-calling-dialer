@@ -934,7 +934,7 @@ export default function DialerPage() {
         {/* Upload Options */}
         <div className="card p-5 sm:p-6 mb-6 sm:mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-sm font-semibold text-foreground">Add Leads</h2>
+            <h2 className="text-base font-semibold tracking-tight text-foreground">Add leads</h2>
             <button
               onClick={() => setShowAddLeadForm(!showAddLeadForm)}
               className="btn btn-secondary btn-sm"
@@ -1132,13 +1132,14 @@ export default function DialerPage() {
           {/* Call Controls */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Call via</span>
-              <div className="inline-flex rounded-lg border border-border overflow-hidden">
+              <span className="eyebrow">Call via</span>
+              <div className="inline-flex gap-1 rounded-lg bg-secondary p-1 ring-1 ring-inset ring-border" role="group" aria-label="Call via">
                 <button
                   onClick={() => setCallMode("phone")}
                   disabled={!!activeCall}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
-                    callMode === "phone" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"
+                  aria-pressed={callMode === "phone"}
+                  className={`h-8 px-3.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 ${
+                    callMode === "phone" ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   Phone
@@ -1146,8 +1147,9 @@ export default function DialerPage() {
                 <button
                   onClick={() => setCallMode("webrtc")}
                   disabled={!!activeCall}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
-                    callMode === "webrtc" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"
+                  aria-pressed={callMode === "webrtc"}
+                  className={`h-8 px-3.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 ${
+                    callMode === "webrtc" ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   Browser
@@ -1157,7 +1159,7 @@ export default function DialerPage() {
 
             {callMode === "phone" && (
               <div className="flex items-center gap-2 text-xs">
-                <span className="font-medium text-muted-foreground uppercase tracking-wide">My Number</span>
+                <span className="eyebrow">My number</span>
                 {editingPhone ? (
                   <>
                     <input
@@ -1193,22 +1195,28 @@ export default function DialerPage() {
 
             {activeCall ? (
               <div className="card p-6 text-center text-sm text-muted-foreground">
-                Call in progress
+                <span className="inline-flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-green opacity-60" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent-green" />
+                  </span>
+                  Call in progress
+                </span>
               </div>
             ) : currentLead ? (
-              <div className="card p-6">
-                <h3 className="text-sm font-semibold text-foreground mb-4">Current Lead</h3>
-                <div className="flex items-center gap-4 mb-6">
+              <div className="card p-5 sm:p-6">
+                <h3 className="eyebrow mb-4">Current lead</h3>
+                <div className="flex items-center gap-4 mb-6 min-w-0">
                   <Avatar name={currentLead.name} size="lg" />
-                  <div className="space-y-1">
-                    <div className="text-base font-semibold text-foreground">{currentLead.name}</div>
+                  <div className="space-y-1 min-w-0">
+                    <div className="text-lg font-semibold tracking-tight text-foreground truncate">{currentLead.name}</div>
                     <div className="text-sm text-muted-foreground font-mono">{currentLead.phone}</div>
-                    {currentLead.email && <div className="text-sm text-muted-foreground">{currentLead.email}</div>}
+                    {currentLead.email && currentLead.email !== "—" && <div className="text-sm text-muted-foreground">{currentLead.email}</div>}
                     {currentLead.company && <div className="text-sm text-muted-foreground">{currentLead.company}</div>}
                   </div>
                 </div>
                 {currentLead.notes && (
-                  <div className="mb-6 text-sm text-foreground bg-secondary rounded-lg p-3">{currentLead.notes}</div>
+                  <div className="mb-6 text-sm text-foreground bg-secondary/70 border border-border rounded-lg p-3 whitespace-pre-line">{currentLead.notes}</div>
                 )}
 
                 <button
@@ -1220,8 +1228,10 @@ export default function DialerPage() {
                 </button>
               </div>
             ) : (
-              <div className="card p-6 text-center text-sm text-muted-foreground">
-                Upload leads to get started
+              <div className="card p-8 text-center">
+                <div className="mx-auto mb-3 h-10 w-10 rounded-full bg-brand-soft text-brand-strong flex items-center justify-center text-lg" aria-hidden="true">+</div>
+                <div className="text-sm font-medium text-foreground">No lead selected</div>
+                <div className="mt-1 text-sm text-muted-foreground">Upload or add leads above to get started.</div>
               </div>
             )}
 
@@ -1233,7 +1243,7 @@ export default function DialerPage() {
                 </div>
                 <div className="divide-y divide-border">
                   {callbackEntries.map((entry) => (
-                    <div key={entry.leadId} className="px-6 py-3.5 flex items-center justify-between">
+                    <div key={entry.leadId} className="px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <Avatar name={entry.name} size="sm" />
                         <div>
