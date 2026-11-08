@@ -6,6 +6,15 @@ export function PencilIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+export function TrashIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 5.5h13M8 5.5V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 5.5l.8 10.1A1.5 1.5 0 0 0 7.3 17h5.4a1.5 1.5 0 0 0 1.5-1.4L15 5.5M8.5 9v4.5M11.5 9v4.5" />
+    </svg>
+  );
+}
+
 export function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} {...props}>

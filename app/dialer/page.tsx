@@ -9,7 +9,8 @@ import { BudgetBanner } from "@/components/BudgetBanner";
 import { Avatar } from "@/components/Avatar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StatRow } from "@/components/StatRow";
-import { PencilIcon, ClockIcon, CheckIcon, XIcon, MailIcon } from "@/components/icons";
+import { PencilIcon, ClockIcon, CheckIcon, XIcon, MailIcon, TrashIcon } from "@/components/icons";
+import { authedFetch } from "@/lib/voice-agent/authedFetch";
 import { useAppReady } from "@/components/AppReadyContext";
 import { BrandedLoader } from "@/components/BrandedLoader";
 import { CallDialog } from "@/components/CallDialog";
@@ -63,6 +64,10 @@ export default function DialerPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [replaceExisting, setReplaceExisting] = useState(false);
   const [isClearingLeads, setIsClearingLeads] = useState(false);
+  // Deleting one lead from the queue: the first click asks, the second deletes.
+  const [confirmDeleteLeadId, setConfirmDeleteLeadId] = useState<string | null>(null);
+  const [deletingLeadId, setDeletingLeadId] = useState<string | null>(null);
+  const [leadListError, setLeadListError] = useState<string | null>(null);
   const [callStatus, setCallStatus] = useState<string>("");
   const [editingCallId, setEditingCallId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({ disposition: "", notes: "", callbackAt: "" });
@@ -229,6 +234,31 @@ export default function DialerPage() {
       setUploadStatus(`✗ Error: ${error}`);
     } finally {
       setIsClearingLeads(false);
+    }
+  };
+
+  const handleDeleteLead = async (lead: Lead) => {
+    setDeletingLeadId(lead.id);
+    setLeadListError(null);
+    try {
+      const res = await authedFetch(`/api/leads/${lead.id}`, { method: "DELETE" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setLeadListError(body.error || "Couldn't delete that lead");
+        return;
+      }
+      const index = leads.findIndex((l) => l.id === lead.id);
+      const remaining = leads.filter((l) => l.id !== lead.id);
+      setLeads(remaining);
+      // Deleting the selected lead moves on to the next one in the queue.
+      if (currentLead?.id === lead.id) {
+        setCurrentLead(remaining[Math.min(index, remaining.length - 1)] ?? null);
+      }
+    } catch (err) {
+      setLeadListError(err instanceof Error ? err.message : "Couldn't delete that lead");
+    } finally {
+      setDeletingLeadId(null);
+      setConfirmDeleteLeadId(null);
     }
   };
 
@@ -1002,24 +1032,64 @@ export default function DialerPage() {
               <div className="bg-muted px-6 py-3.5 border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground">Pending Leads ({leads.length})</h3>
               </div>
+              {leadListError && (
+                <div className="px-4 py-2.5 border-b border-border bg-destructive/10 text-destructive text-xs flex items-start justify-between gap-2">
+                  <span>{leadListError}</span>
+                  <button onClick={() => setLeadListError(null)} aria-label="Dismiss" className="shrink-0 hover:opacity-70">
+                    <XIcon className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
               <div className="max-h-96 overflow-y-auto">
                 {leads.length === 0 ? (
                   <div className="p-6 text-center text-sm text-muted-foreground">No pending leads</div>
                 ) : (
                   leads.map((lead) => (
-                    <button
+                    <div
                       key={lead.id}
-                      onClick={() => setCurrentLead(lead)}
-                      className={`w-full flex items-center gap-3 text-left px-6 py-3.5 border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors ${
+                      className={`flex items-center border-b border-border last:border-b-0 ${
                         currentLead?.id === lead.id ? "bg-muted border-l-2 border-l-brand" : ""
                       }`}
                     >
-                      <Avatar name={lead.name} size="sm" />
-                      <div>
-                        <div className="text-sm font-medium text-foreground">{lead.name}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{lead.phone}</div>
-                      </div>
-                    </button>
+                      <button
+                        onClick={() => setCurrentLead(lead)}
+                        className="flex-1 min-w-0 flex items-center gap-3 text-left pl-6 pr-2 py-3.5 hover:bg-muted/50 transition-colors"
+                      >
+                        <Avatar name={lead.name} size="sm" />
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-foreground truncate">{lead.name}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{lead.phone}</div>
+                        </div>
+                      </button>
+                      {confirmDeleteLeadId === lead.id ? (
+                        <div className="flex items-center gap-2 pr-4 shrink-0 text-xs">
+                          <button
+                            onClick={() => handleDeleteLead(lead)}
+                            disabled={deletingLeadId === lead.id}
+                            className="font-medium text-destructive hover:underline disabled:opacity-50"
+                          >
+                            {deletingLeadId === lead.id ? "Deleting..." : "Delete"}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteLeadId(null)}
+                            disabled={deletingLeadId === lead.id}
+                            className="text-muted-foreground hover:underline"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteLeadId(lead.id)}
+                          disabled={!!activeCall}
+                          title="Delete this lead"
+                          aria-label={`Delete ${lead.name}`}
+                          className="mr-3 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors shrink-0"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   ))
                 )}
               </div>
