@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
 import { verifyTelnyxSignature } from "@/lib/telnyx";
 import { finalizeCallCost } from "@/lib/billing";
+import { moveLeadAfterCall } from "@/lib/leads";
 
 // Fires when the inner <Dial> to the lead concludes. This is the only
 // reliable source for what actually happened to the lead's leg -- the
@@ -50,6 +51,14 @@ export async function POST(req: NextRequest) {
   // The agent's leg may still be finishing; /api/calls/status prices the call
   // again when it does.
   await finalizeCallCost(callRecordId);
+
+  // The lead leaves "in progress" now: answered -> called, otherwise back in
+  // the queue for another try (an outcome the agent saves still decides).
+  try {
+    await moveLeadAfterCall(callRecordId);
+  } catch (err) {
+    console.error("dial-status: couldn't release the lead", err);
+  }
 
   return new NextResponse(
     `<?xml version="1.0" encoding="UTF-8"?><Response><Hangup/></Response>`,

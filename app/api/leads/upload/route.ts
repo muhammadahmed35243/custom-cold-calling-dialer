@@ -23,14 +23,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Only clears untouched (pending) leads -- same scope as
-    // DELETE /api/leads/pending, never leads that are in_progress or
-    // already have real call history.
+    // Only clears untouched leads -- same scope as DELETE /api/leads/pending:
+    // waiting in the queue and never called. Leads back in the queue for a
+    // retry have call history (deleting a lead deletes its calls), so they stay.
     if (replaceExisting) {
       const { error: clearError } = await supabaseServiceClient
         .from("leads")
         .delete()
         .eq("status", "pending")
+        .is("last_called_at", null)
         .eq("org_id", actor.orgId)
         .eq("owner_email", actor.email);
 

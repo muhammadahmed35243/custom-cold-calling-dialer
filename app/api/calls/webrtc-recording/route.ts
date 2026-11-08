@@ -8,6 +8,7 @@ import {
 } from "@/lib/telnyx";
 import { saveRecordingForCall } from "@/lib/storage";
 import { finalizeCallCost, phoneDigits } from "@/lib/billing";
+import { moveLeadAfterCall } from "@/lib/leads";
 
 // The WebRTC SDK's Call object doesn't reliably expose Telnyx's server-side
 // call_control_id, so the client round-trips our own calls.id through
@@ -203,6 +204,11 @@ export async function POST(req: NextRequest) {
         })
         .eq("id", row.id);
       await finalizeCallCost(row.id);
+      try {
+        await moveLeadAfterCall(row.id);
+      } catch (err) {
+        console.error("WebRTC: couldn't release the lead", err);
+      }
 
       return ok();
     }

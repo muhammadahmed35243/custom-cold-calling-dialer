@@ -69,6 +69,8 @@ export type Lead = {
   // Optional: the dialer builds partial leads from call rows.
   owner_email?: string | null;
   org_id?: string;
+  // When the lead was last dialed; set means it's back in the queue for a retry.
+  last_called_at?: string | null;
   created_at: string;
   updated_at: string;
 };

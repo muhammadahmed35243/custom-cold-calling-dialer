@@ -31,10 +31,12 @@ async function fetchAllPendingLeads(): Promise<Lead[]> {
   let from = 0;
 
   while (true) {
+    // Queue order: leads never tried first, then the retry that has waited longest.
     const { data, error } = await supabaseClient
       .from("leads")
       .select("*")
       .eq("status", "pending")
+      .order("last_called_at", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
 
@@ -68,6 +70,12 @@ export default function DialerPage() {
   const [confirmDeleteLeadId, setConfirmDeleteLeadId] = useState<string | null>(null);
   const [deletingLeadId, setDeletingLeadId] = useState<string | null>(null);
   const [leadListError, setLeadListError] = useState<string | null>(null);
+  // What "Clear" can delete: the agent's own leads that were never called
+  // (retries keep their call history).
+  const clearableLeadCount = useMemo(
+    () => leads.filter((l) => !l.last_called_at && (!l.owner_email || l.owner_email === user?.email)).length,
+    [leads, user]
+  );
   const [callStatus, setCallStatus] = useState<string>("");
   const [editingCallId, setEditingCallId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({ disposition: "", notes: "", callbackAt: "" });
@@ -129,6 +137,9 @@ export default function DialerPage() {
       setUser(authUser);
       setMyPhoneNumber(agent.phone_number || "");
       setRole(agent.role);
+      // Safety net: frees leads still "in progress" from calls that ended
+      // without the end reaching the server, so they show up in the queue.
+      await authedFetch("/api/leads/release-stuck", { method: "POST" }).catch(() => {});
       loadLeadsAndCalls();
       setLoading(false);
       setReady();
@@ -204,8 +215,15 @@ export default function DialerPage() {
   };
 
   const handleClearPendingLeads = async () => {
-    const pendingCount = leads.length;
-    if (!confirm(`Delete ${pendingCount} pending lead${pendingCount === 1 ? "" : "s"}? Leads already called (with history/recordings) won't be touched.`)) {
+    if (clearableLeadCount === 0) {
+      setUploadStatus("Nothing to clear: every lead waiting here has been called before, so it's kept with its call history.");
+      return;
+    }
+    if (
+      !confirm(
+        `Delete ${clearableLeadCount} lead${clearableLeadCount === 1 ? "" : "s"} that haven't been called yet? Leads with call history (retries, called, callbacks) won't be touched.`
+      )
+    ) {
       return;
     }
 
@@ -225,7 +243,10 @@ export default function DialerPage() {
 
       const result = await response.json();
       if (response.ok) {
-        setUploadStatus(`✓ Cleared ${result.deleted} pending lead${result.deleted === 1 ? "" : "s"}`);
+        setUploadStatus(
+          `✓ Cleared ${result.deleted} lead${result.deleted === 1 ? "" : "s"}` +
+            (result.kept ? ` · kept ${result.kept} waiting for another try` : "")
+        );
         loadLeadsAndCalls();
       } else {
         setUploadStatus(`✗ Failed to clear leads: ${result.error}`);
@@ -1013,12 +1034,15 @@ export default function DialerPage() {
                 <div className="mt-4 pt-4 border-t border-border">
                   <button
                     onClick={handleClearPendingLeads}
-                    disabled={isClearingLeads || leads.length === 0}
+                    disabled={isClearingLeads || clearableLeadCount === 0}
                     className="text-sm bg-destructive/10 hover:bg-destructive/20 disabled:opacity-50 disabled:cursor-not-allowed text-destructive font-medium py-2 px-4 rounded-lg transition-colors"
                   >
-                    {isClearingLeads ? "Clearing..." : `Clear Pending Leads (${leads.length})`}
+                    {isClearingLeads ? "Clearing..." : `Clear Uncalled Leads (${clearableLeadCount})`}
                   </button>
-                  <p className="text-xs text-muted-foreground mt-2">Only removes leads not yet called -- already-called leads and their history are never touched</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Only removes your leads that were never called. Leads waiting for another try, called leads and
+                    callbacks keep their history.
+                  </p>
                 </div>
               </div>
             </div>
@@ -1059,6 +1083,11 @@ export default function DialerPage() {
                         <div className="min-w-0">
                           <div className="text-sm font-medium text-foreground truncate">{lead.name}</div>
                           <div className="text-xs text-muted-foreground font-mono">{lead.phone}</div>
+                          {lead.last_called_at && (
+                            <div className="text-[11px] text-brand">
+                              Retry &middot; last tried {new Date(lead.last_called_at).toLocaleDateString()}
+                            </div>
+                          )}
                         </div>
                       </button>
                       {confirmDeleteLeadId === lead.id ? (

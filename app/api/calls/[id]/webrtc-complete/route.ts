@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
 import { getActor } from "@/lib/authz";
+import { moveLeadAfterCall } from "@/lib/leads";
 
 // WebRTC calls have no separate "agent leg" the way phone-bridge calls do --
 // the agent's own audio IS the browser, connected the moment they're logged
@@ -43,6 +44,14 @@ export async function POST(
       .eq("id", params.id)
       .eq("agent_email", actor.email)
       .is("ended_at", null);
+
+    // Covers browser calls Telnyx never saw (so no hangup webhook will come).
+    // The browser's "connected" is a hint in case Telnyx's answer event is late.
+    try {
+      await moveLeadAfterCall(params.id, { answeredHint: !!connected });
+    } catch (err) {
+      console.error("webrtc-complete: couldn't release the lead", err);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

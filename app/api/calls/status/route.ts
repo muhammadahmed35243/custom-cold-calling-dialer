@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
 import { verifyTelnyxSignature } from "@/lib/telnyx";
 import { finalizeCallCost } from "@/lib/billing";
+import { moveLeadAfterCall } from "@/lib/leads";
 
 export async function POST(req: NextRequest) {
   const signature = req.headers.get("telnyx-signature-ed25519") || "";
@@ -83,7 +84,16 @@ export async function POST(req: NextRequest) {
       return new NextResponse(`Update failed: ${updateError.message}`, { status: 500 });
     }
 
-    if (isFinal) await finalizeCallCost(callRecord.id);
+    if (isFinal) {
+      await finalizeCallCost(callRecord.id);
+      // If the agent never picked up, the lead was never dialed: it goes
+      // straight back in the queue. (Otherwise dial-status already moved it.)
+      try {
+        await moveLeadAfterCall(callRecord.id);
+      } catch (err) {
+        console.error("status: couldn't release the lead", err);
+      }
+    }
 
     return new NextResponse("OK", { status: 200 });
   } catch (error) {
