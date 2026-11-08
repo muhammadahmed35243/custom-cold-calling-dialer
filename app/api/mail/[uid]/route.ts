@@ -1,24 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMailboxUser } from "@/lib/mail-access";
-import { getMessage } from "@/lib/mailer";
+import { getMailContext, handleMailboxFailure, mailboxErrorResponse } from "@/lib/mailboxes";
+import { getMessage, MAIL_FOLDERS, type MailFolder } from "@/lib/mailer";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { uid: string } }
 ) {
-  const { user, error: accessError } = await getMailboxUser(req);
+  const { context, error: accessError } = await getMailContext(req);
   if (accessError) return accessError;
 
-  const folder = req.nextUrl.searchParams.get("folder") || "Inbox";
+  const folderParam = req.nextUrl.searchParams.get("folder") || "Inbox";
+  if (!(MAIL_FOLDERS as readonly string[]).includes(folderParam)) {
+    return NextResponse.json({ error: "Unknown folder" }, { status: 400 });
+  }
   const uid = parseInt(params.uid, 10);
+  if (!Number.isInteger(uid) || uid <= 0) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   try {
-    const message = await getMessage(folder, uid);
+    const message = await getMessage(context.mailbox, folderParam as MailFolder, uid);
 
     // Re-check permission server-side even though the list was already
     // filtered -- don't trust a UID isn't guessed/enumerated.
-    if (!user.isAdmin) {
-      const alias = user.aliasEmail!.toLowerCase();
+    if (context.filterAddress) {
+      const alias = context.filterAddress.toLowerCase();
       const involvesAlias =
         message.from.toLowerCase().includes(alias) || message.to.toLowerCase().includes(alias);
       if (!involvesAlias) {
@@ -27,10 +33,10 @@ export async function GET(
     }
 
     return NextResponse.json({ message });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    );
+  } catch (err) {
+    return mailboxErrorResponse(await handleMailboxFailure(context.row, err));
   }
 }
+
+// Mail servers can be slow to answer.
+export const maxDuration = 60;

@@ -4,79 +4,130 @@ import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import sanitizeHtml from "sanitize-html";
 
-let transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
+// Sending and reading mail through one mailbox: an organization's or agent's
+// connected mailbox (lib/mailboxes.ts resolves which), or JETZT's original
+// SMTP_* mailbox.
 
-function getTransporter() {
-  if (transporter) return transporter;
+export type MailboxAuth = { user: string; pass: string } | { user: string; accessToken: string };
 
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD } = process.env;
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASSWORD) {
-    throw new Error("SMTP is not configured (missing SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASSWORD)");
-  }
+export type MailboxConfig = {
+  email: string;
+  displayName: string | null;
+  smtp: { host: string; port: number; secure: boolean };
+  imap: { host: string; port: number };
+  auth: MailboxAuth;
+  // Gmail files sent mail into Sent by itself; for everyone else a copy has
+  // to be appended over IMAP or sent mail never shows up there.
+  savesSentItself: boolean;
+};
 
-  transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT),
-    secure: Number(SMTP_PORT) === 465,
+// The mail screens' folders; each mailbox may call them something else.
+export const MAIL_FOLDERS = ["Inbox", "Sent", "Drafts"] as const;
+export type MailFolder = (typeof MAIL_FOLDERS)[number];
+
+// JETZT's original mailbox from the SMTP_* environment variables, if set.
+export function envMailbox(): MailboxConfig | null {
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM_NAME } = process.env;
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASSWORD) return null;
+  const port = Number(SMTP_PORT || 465);
+  return {
+    email: SMTP_USER,
+    displayName: SMTP_FROM_NAME || "JETZT",
+    smtp: { host: SMTP_HOST, port, secure: port === 465 },
+    imap: { host: SMTP_HOST, port: 993 },
     auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
-  });
-
-  return transporter;
+    savesSentItself: false,
+  };
 }
 
-function getImapClient() {
-  const { SMTP_HOST, SMTP_USER, SMTP_PASSWORD } = process.env;
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASSWORD) {
-    throw new Error("SMTP is not configured (missing SMTP_HOST/SMTP_USER/SMTP_PASSWORD)");
-  }
+function transportFor(mailbox: MailboxConfig) {
+  return nodemailer.createTransport({
+    host: mailbox.smtp.host,
+    port: mailbox.smtp.port,
+    secure: mailbox.smtp.secure,
+    auth:
+      "accessToken" in mailbox.auth
+        ? { type: "OAuth2", user: mailbox.auth.user, accessToken: mailbox.auth.accessToken }
+        : { user: mailbox.auth.user, pass: mailbox.auth.pass },
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 30000,
+  });
+}
 
+function imapFor(mailbox: MailboxConfig) {
   return new ImapFlow({
-    host: SMTP_HOST,
-    port: 993,
-    secure: true,
-    auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+    host: mailbox.imap.host,
+    port: mailbox.imap.port,
+    // 993 is TLS from the start; anything else upgrades with STARTTLS.
+    secure: mailbox.imap.port === 993,
+    auth:
+      "accessToken" in mailbox.auth
+        ? { user: mailbox.auth.user, accessToken: mailbox.auth.accessToken }
+        : { user: mailbox.auth.user, pass: mailbox.auth.pass },
     logger: false,
+    connectionTimeout: 15000,
   });
 }
 
-// Plain SMTP submission has no concept of "save a copy to Sent" -- that's
-// normally the sending client's job (webmail does both at once). Since we
-// send via raw SMTP, we have to explicitly file a copy over IMAP ourselves
-// or sent mail never shows up in the mailbox's own Sent folder.
-async function appendToSent(raw: Buffer) {
-  const client = getImapClient();
+// The mailbox's real path for a folder: Gmail's Sent is "[Gmail]/Sent Mail",
+// some servers use "INBOX.Sent", most "Sent". Uses the server's own
+// special-use flags first, then common names.
+async function folderPath(client: ImapFlow, folder: MailFolder): Promise<string> {
+  if (folder === "Inbox") return "INBOX";
+  const list = await client.list();
+  const flag = folder === "Sent" ? "\\Sent" : "\\Drafts";
+  const flagged = list.find((box) => box.specialUse === flag);
+  if (flagged) return flagged.path;
+  const names = folder === "Sent" ? ["sent", "sent items", "sent mail", "inbox.sent"] : ["drafts", "inbox.drafts"];
+  const named = list.find((box) => names.includes(box.path.toLowerCase()) || names.includes(box.name.toLowerCase()));
+  return named ? named.path : folder;
+}
+
+// Checks the details work (SMTP sign-in, then IMAP sign-in) before they're saved.
+export async function testMailbox(mailbox: MailboxConfig): Promise<void> {
+  await transportFor(mailbox).verify();
+  const client = imapFor(mailbox);
+  await client.connect();
+  await client.logout();
+}
+
+async function appendToSent(mailbox: MailboxConfig, raw: Buffer) {
+  const client = imapFor(mailbox);
   await client.connect();
   try {
-    await client.append("Sent", raw, ["\\Seen"]);
+    await client.append(await folderPath(client, "Sent"), raw, ["\\Seen"]);
   } finally {
     await client.logout();
   }
 }
 
-export async function sendMail(
-  to: string,
-  subject: string,
-  text: string,
-  from?: { name: string; address: string },
-  // replyTo: where a reply goes (e.g. the person who wrote in).
-  // saveToSent: false for notifications that shouldn't clutter the Sent folder.
-  options: { replyTo?: string; saveToSent?: boolean } = {}
-) {
-  const fromName = from?.name || process.env.SMTP_FROM_NAME || "JETZT";
-  // Auth always uses the one shared mailbox account -- only the From header
-  // changes per agent. Since alias addresses share the same domain as the
-  // authenticated mailbox, this stays SPF/DKIM-domain-aligned.
-  const fromAddress = from?.address || process.env.SMTP_USER;
+export type OutgoingMail = {
+  to: string;
+  subject: string;
+  text: string;
+  // Defaults to the mailbox's own name and address; agents on a shared
+  // mailbox send as their alias.
+  from?: { name: string; address: string };
+  // Where a reply goes (e.g. the person who wrote in).
+  replyTo?: string;
+  // false for notifications that shouldn't clutter the Sent folder.
+  saveToSent?: boolean;
+};
+
+export async function sendMail(mailbox: MailboxConfig, mail: OutgoingMail) {
+  const fromName = mail.from?.name || mailbox.displayName || "JETZT";
+  const fromAddress = mail.from?.address || mailbox.email;
   const mailOptions = {
-    from: `"${fromName}" <${fromAddress}>`,
-    to,
-    subject,
-    text,
-    ...(options.replyTo ? { replyTo: options.replyTo } : {}),
+    from: `"${fromName.replace(/"/g, "'")}" <${fromAddress}>`,
+    to: mail.to,
+    subject: mail.subject,
+    text: mail.text,
+    ...(mail.replyTo ? { replyTo: mail.replyTo } : {}),
   };
 
-  await getTransporter().sendMail(mailOptions);
-  if (options.saveToSent === false) return;
+  await transportFor(mailbox).sendMail(mailOptions);
+  if (mail.saveToSent === false || mailbox.savesSentItself) return;
 
   try {
     const raw: Buffer = await new Promise((resolve, reject) => {
@@ -85,7 +136,7 @@ export async function sendMail(
         else resolve(message);
       });
     });
-    await appendToSent(raw);
+    await appendToSent(mailbox, raw);
   } catch (err) {
     // The email itself already went out -- don't fail the whole send just
     // because filing a copy into Sent didn't work.
@@ -113,14 +164,15 @@ function structureHasAttachment(node: any): boolean {
 }
 
 export async function listMessages(
-  folder: string,
+  mailbox: MailboxConfig,
+  folder: MailFolder,
   opts: { filterAddress?: string; limit?: number; beforeUid?: number } = {}
 ): Promise<MessageSummary[]> {
-  const client = getImapClient();
+  const client = imapFor(mailbox);
   await client.connect();
 
   try {
-    await client.mailboxOpen(folder, { readOnly: true });
+    await client.mailboxOpen(await folderPath(client, folder), { readOnly: true });
 
     const searchQuery = opts.filterAddress
       ? { or: [{ to: opts.filterAddress }, { from: opts.filterAddress }, { cc: opts.filterAddress }] }
@@ -172,12 +224,12 @@ export type ParsedMessage = {
   attachments: { filename: string; size: number }[];
 };
 
-export async function getMessage(folder: string, uid: number): Promise<ParsedMessage> {
-  const client = getImapClient();
+export async function getMessage(mailbox: MailboxConfig, folder: MailFolder, uid: number): Promise<ParsedMessage> {
+  const client = imapFor(mailbox);
   await client.connect();
 
   try {
-    await client.mailboxOpen(folder, { readOnly: true });
+    await client.mailboxOpen(await folderPath(client, folder), { readOnly: true });
 
     const { content } = await client.download(String(uid), undefined, { uid: true });
     const chunks: Buffer[] = [];

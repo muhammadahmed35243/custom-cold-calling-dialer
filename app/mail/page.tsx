@@ -8,6 +8,7 @@ import { Avatar } from "@/components/Avatar";
 import { useAppReady } from "@/components/AppReadyContext";
 import { BrandedLoader } from "@/components/BrandedLoader";
 import { isAdminRole } from "@/lib/roles";
+import { MailboxNotice, MailboxSettings } from "@/components/mailbox/MailboxSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,11 @@ export default function MailPage() {
   const [messages, setMessages] = useState<MessageSummary[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
+  // No usable mailbox yet (none connected, no alias, or it needs reconnecting):
+  // the page shows why, with the connect options.
+  const [mailboxProblem, setMailboxProblem] = useState<string | null>(null);
+  const [activeMailbox, setActiveMailbox] = useState<{ email: string; source: string; filter: string | null } | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const [selectedMessage, setSelectedMessage] = useState<ParsedMessage | null>(null);
   const [loadingMessage, setLoadingMessage] = useState(false);
@@ -106,6 +112,11 @@ export default function MailPage() {
       const result = await response.json();
       if (response.ok) {
         setMessages(result.messages || []);
+        setActiveMailbox(result.mailbox || null);
+        setMailboxProblem(null);
+      } else if (["no_mailbox", "no_alias", "reconnect"].includes(result.code)) {
+        setMailboxProblem(result.error);
+        setMessages([]);
       } else {
         setListError(result.error || "Failed to load messages");
         setMessages([]);
@@ -119,8 +130,7 @@ export default function MailPage() {
 
   useEffect(() => {
     if (!agentInfo) return;
-    const hasMailbox = isAdminRole(agentInfo.role) || !!agentInfo.alias_email;
-    if (hasMailbox) loadMessages(folder);
+    loadMessages(folder);
     // loadMessages is stable enough for this purpose; including it would
     // require wrapping in useCallback for no real benefit here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -188,17 +198,25 @@ export default function MailPage() {
     return <BrandedLoader />;
   }
 
-  const hasMailbox = isAdminRole(agentInfo?.role) || !!agentInfo?.alias_email;
+  const isAdmin = isAdminRole(agentInfo?.role);
+  const reloadMail = () => loadMessages(folder);
+  const settings = (
+    <div className="space-y-6">
+      <MailboxSettings scope="own" returnTo="/mail" onChange={reloadMail} />
+      {isAdmin && <MailboxSettings scope="shared" returnTo="/mail" onChange={reloadMail} />}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background">
       <AppHeader userEmail={user?.email} role={agentInfo?.role} onSignOut={handleSignOut} />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {!hasMailbox ? (
-          <div className="bg-card border border-border rounded-xl p-8 text-center">
-            <h2 className="text-sm font-semibold text-foreground mb-1.5">No mailbox alias assigned yet</h2>
-            <p className="text-sm text-muted-foreground">Ask your admin to assign you a mailbox alias to use Mail.</p>
+        <MailboxNotice />
+        {mailboxProblem ? (
+          <div className="space-y-6 max-w-3xl">
+            <div className="p-4 rounded-xl border border-brand/30 bg-brand/10 text-sm text-foreground">{mailboxProblem}</div>
+            {settings}
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -223,13 +241,28 @@ export default function MailPage() {
                   </button>
                 ))}
               </div>
-              {isAdminRole(agentInfo?.role) && (
-                <p className="text-xs text-muted-foreground px-1">Viewing all mail (admin)</p>
+              <button
+                onClick={() => setShowSettings((open) => !open)}
+                className="w-full text-left px-4 py-3 text-sm bg-card border border-border rounded-xl text-foreground hover:bg-muted/50 transition-colors"
+              >
+                {showSettings ? "← Back to mail" : "Mailbox settings"}
+              </button>
+              {activeMailbox && (
+                <p className="text-xs text-muted-foreground px-1 break-all">
+                  {activeMailbox.source === "own"
+                    ? `Your mailbox: ${activeMailbox.email}`
+                    : activeMailbox.filter
+                      ? `Shared mailbox ${activeMailbox.email}, showing mail for ${activeMailbox.filter}`
+                      : `${activeMailbox.source === "jetzt" ? "JETZT" : "Shared"} mailbox: ${activeMailbox.email} (all mail)`}
+                </p>
               )}
             </div>
 
-            {/* Message list */}
+            {/* Message list, or the mailbox settings */}
             <div className="lg:col-span-3">
+              {showSettings ? (
+                settings
+              ) : (
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="bg-muted px-6 py-3.5 border-b border-border">
                   <h3 className="text-sm font-semibold text-foreground">{folder}</h3>
@@ -268,6 +301,7 @@ export default function MailPage() {
                   )}
                 </div>
               </div>
+              )}
             </div>
           </div>
         )}

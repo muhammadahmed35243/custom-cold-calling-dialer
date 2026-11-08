@@ -1,28 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMailboxUser } from "@/lib/mail-access";
+import { getMailContext, handleMailboxFailure, mailboxErrorResponse, MailboxError } from "@/lib/mailboxes";
 import { sendMail } from "@/lib/mailer";
 
 export async function POST(req: NextRequest) {
-  const { user, error: accessError } = await getMailboxUser(req);
+  const { context, error: accessError } = await getMailContext(req);
   if (accessError) return accessError;
 
+  const { to, subject, body } = await req.json().catch(() => ({}));
+  if (!to || !subject || !body) {
+    return NextResponse.json({ error: "To, subject, and body are required" }, { status: 400 });
+  }
+
   try {
-    const { to, subject, body } = await req.json();
-    if (!to || !subject || !body) {
-      return NextResponse.json({ error: "To, subject, and body are required" }, { status: 400 });
-    }
-
-    const fromOverride = user.aliasEmail
-      ? { name: user.displayName, address: user.aliasEmail }
-      : undefined;
-
-    await sendMail(to, subject, body, fromOverride);
-
+    await sendMail(context.mailbox, { to, subject, text: body, from: context.sendAs });
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (err) {
+    const failure = await handleMailboxFailure(context.row, err);
+    if (failure instanceof MailboxError) return mailboxErrorResponse(failure);
     return NextResponse.json(
-      { error: `Failed to send: ${error instanceof Error ? error.message : String(error)}` },
+      { error: `Failed to send: ${failure instanceof Error ? failure.message : String(failure)}` },
       { status: 500 }
     );
   }
 }
+
+// Mail servers can be slow to answer.
+export const maxDuration = 60;

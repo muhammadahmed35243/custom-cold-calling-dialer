@@ -1,7 +1,7 @@
 import { createHmac } from "crypto";
 import type { NextRequest } from "next/server";
 import { supabaseServiceClient } from "./supabase";
-import { sendMail } from "./mailer";
+import { envMailbox, sendMail } from "./mailer";
 import { SUPER_ADMIN_EMAIL } from "./authz";
 
 // Messages to JETZT (the contact_messages table, migration 0010): from the
@@ -112,14 +112,22 @@ export async function notifySuperAdmin(notice: Notice): Promise<boolean> {
     `All messages: ${appUrl}/super-admin?tab=messages`,
   ].filter((line): line is string => line !== null);
 
+  // Sent from JETZT's own mailbox (the SMTP_* settings).
+  const mailbox = envMailbox();
+  if (!mailbox) {
+    console.error("contact: JETZT's mailbox (SMTP_*) isn't set up, so the super admin wasn't emailed");
+    return false;
+  }
+
   try {
-    await sendMail(
-      SUPER_ADMIN_EMAIL,
-      subject.slice(0, 200),
-      lines.join("\n"),
-      { name: "JETZT Dialer", address: process.env.SMTP_USER || "" },
-      { replyTo: notice.senderEmail, saveToSent: false }
-    );
+    await sendMail(mailbox, {
+      to: SUPER_ADMIN_EMAIL,
+      subject: subject.slice(0, 200),
+      text: lines.join("\n"),
+      from: { name: "JETZT Dialer", address: mailbox.email },
+      replyTo: notice.senderEmail,
+      saveToSent: false,
+    });
     await supabaseServiceClient.from("contact_messages").update({ email_notified: true }).eq("id", notice.id);
     return true;
   } catch (err) {

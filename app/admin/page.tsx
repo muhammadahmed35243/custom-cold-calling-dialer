@@ -18,6 +18,7 @@ import { BookingsTab } from "@/components/admin/BookingsTab";
 import { PhoneNumbersTab } from "@/components/admin/PhoneNumbersTab";
 import { UsageTab } from "@/components/admin/UsageTab";
 import { SupportTab } from "@/components/admin/SupportTab";
+import { MailboxNotice, MailboxSettings } from "@/components/mailbox/MailboxSettings";
 import { BudgetBanner, type BudgetInfo } from "@/components/BudgetBanner";
 import { authedFetch } from "@/lib/voice-agent/authedFetch";
 import type { PhoneNumber } from "@/lib/supabase";
@@ -37,7 +38,7 @@ type Me = {
 // any organization opened from the console (/admin?orgId=...).
 type ViewedOrg = { id: string; name: string; voiceAssistantEnabled: boolean; isOwn: boolean };
 
-type Tab = "calls" | "agents" | "phone-numbers" | "usage" | "support" | "voice-calls" | "instructions" | "knowledge-base" | "insights" | "messages" | "bookings";
+type Tab = "calls" | "agents" | "phone-numbers" | "usage" | "mailbox" | "support" | "voice-calls" | "instructions" | "knowledge-base" | "insights" | "messages" | "bookings";
 
 const VOICE_AGENT_TABS: { key: Tab; label: string }[] = [
   { key: "voice-calls", label: "Voice Agent Calls" },
@@ -109,6 +110,8 @@ export default function AdminDashboard() {
         };
       }
       setViewedOrg(org);
+      // e.g. coming back from "Sign in with Google" on the Mailbox tab.
+      if (new URLSearchParams(window.location.search).get("tab") === "mailbox") setTab("mailbox");
       const orgQuery = org.isOwn ? "" : `?orgId=${encodeURIComponent(org.id)}`;
 
       // Through server routes rather than direct table reads: the database
@@ -185,6 +188,7 @@ export default function AdminDashboard() {
 
         {/* Own organization only; another organization's spend is on its Usage tab. */}
         <BudgetBanner budget={viewedOrg?.isOwn ? me?.budget ?? null : null} />
+        <MailboxNotice />
 
         <div className="flex gap-1 mb-6 border-b border-border">
           <button
@@ -226,6 +230,16 @@ export default function AdminDashboard() {
             }`}
           >
             Usage
+          </button>
+          <button
+            onClick={() => setTab("mailbox")}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              tab === "mailbox"
+                ? "text-foreground border-brand"
+                : "text-muted-foreground border-transparent hover:text-foreground"
+            }`}
+          >
+            Mailbox
           </button>
           {me?.role !== "super_admin" && (
             <button
@@ -317,6 +331,15 @@ export default function AdminDashboard() {
         )}
         {tab === "phone-numbers" && <PhoneNumbersTab orgQuery={orgQuery} canBuy={!!me?.canBuyNumbers} />}
         {tab === "usage" && <UsageTab orgQuery={orgQuery} />}
+        {tab === "mailbox" && (
+          <div className="max-w-3xl">
+            <MailboxSettings
+              scope="shared"
+              orgQuery={orgQuery}
+              returnTo={`/admin?tab=mailbox${orgQuery ? `&${orgQuery.slice(1)}` : ""}`}
+            />
+          </div>
+        )}
         {tab === "support" && me?.role !== "super_admin" && <SupportTab />}
         {tab === "voice-calls" && <VoiceCallsTab />}
         {tab === "instructions" && <InstructionsTab />}
