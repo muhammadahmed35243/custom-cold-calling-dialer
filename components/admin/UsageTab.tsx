@@ -154,7 +154,10 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
     const link = document.createElement("a");
     link.href = url;
     link.download = `${usage.org.name.replace(/[^a-z0-9]+/gi, "-")}-statement-${usage.month}.csv`;
+    // Some browsers only download from a link that's on the page.
+    document.body.appendChild(link);
     link.click();
+    link.remove();
     URL.revokeObjectURL(url);
   };
 

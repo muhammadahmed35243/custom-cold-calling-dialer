@@ -255,7 +255,7 @@ export default function SuperAdminPage() {
                 <dd className="text-foreground">{limit(org.numberCount, org.max_phone_numbers)}</dd>
                 <dt className="text-muted-foreground">This month</dt>
                 <dd className="text-foreground">
-                  {org.monthSpend === null ? (
+                  {!org.monthSpend ? (
                     "-"
                   ) : (
                     <>
