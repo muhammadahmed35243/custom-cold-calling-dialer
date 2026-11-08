@@ -97,15 +97,22 @@ export function canAccessOrg(actor: Actor, rowOrgId: string | null | undefined):
   return actor.role === "super_admin" || (!!rowOrgId && rowOrgId === actor.orgId);
 }
 
-// Until organizations have number limits and marked-up prices (the billing
-// phase), buying numbers is limited to the super admin and JETZT's own
-// admins. The super admin buys numbers for other organizations.
-export function canBuyNumbers(actor: Actor): boolean {
-  return actor.role === "super_admin" || actor.orgId === FOUNDING_ORG_ID;
+// Admins buy numbers for their own organization, within its number limit (a
+// limit of 0 turns buying off) and budget, at its marked-up price. The super
+// admin buys for any organization.
+export function canBuyNumbers(actor: Actor, org: Organization = actor.org): boolean {
+  if (actor.role === "super_admin") return true;
+  return ADMIN_ROLES.includes(actor.role) && org.max_phone_numbers !== 0;
 }
 
 export const BUY_NUMBERS_BLOCKED_MESSAGE =
-  "Buying numbers isn't available for your organization yet. Ask JETZT to add a number for you.";
+  "Your organization can't buy phone numbers. Ask JETZT to raise its number limit.";
+
+// Telnyx's own prices (JETZT's cost) are only for JETZT: the super admin, and
+// JETZT's own team, whose price is the cost anyway.
+export function canSeeCosts(actor: Actor): boolean {
+  return actor.role === "super_admin" || actor.orgId === FOUNDING_ORG_ID;
+}
 
 export async function loadOrganization(orgId: string): Promise<Organization | null> {
   const { data } = await supabaseServiceClient.from("organizations").select("*").eq("id", orgId).single();

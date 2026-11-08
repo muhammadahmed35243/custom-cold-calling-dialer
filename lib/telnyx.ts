@@ -10,13 +10,14 @@ import { FOUNDING_ORG_ID } from "./authz";
 export async function getOutboundNumberForAgent(agentEmail: string): Promise<string> {
   const { data: agent } = await supabaseServiceClient
     .from("agents")
-    .select("org_id, outbound_phone_number_id, phone_numbers:outbound_phone_number_id(phone_number)")
+    .select("org_id, outbound_phone_number_id, phone_numbers:outbound_phone_number_id(phone_number, released_at)")
     .eq("email", agentEmail)
     .single();
 
-  const assigned = agent?.phone_numbers as { phone_number: string } | { phone_number: string }[] | null;
-  const assignedNumber = Array.isArray(assigned) ? assigned[0]?.phone_number : assigned?.phone_number;
-  if (assignedNumber) return assignedNumber;
+  type Assigned = { phone_number: string; released_at: string | null };
+  const assignedRaw = agent?.phone_numbers as Assigned | Assigned[] | null;
+  const assigned = Array.isArray(assignedRaw) ? assignedRaw[0] : assignedRaw;
+  if (assigned?.phone_number && !assigned.released_at) return assigned.phone_number;
 
   const orgId = agent?.org_id as string | undefined;
   if (orgId) {
@@ -25,6 +26,7 @@ export async function getOutboundNumberForAgent(agentEmail: string): Promise<str
       .select("phone_number")
       .eq("org_id", orgId)
       .eq("is_active", true)
+      .is("released_at", null)
       .maybeSingle();
     if (active?.phone_number) return active.phone_number;
   }
@@ -34,6 +36,44 @@ export async function getOutboundNumberForAgent(agentEmail: string): Promise<str
   }
 
   throw new Error("No outbound number is set up for your organization yet. Ask your admin to buy or assign one.");
+}
+
+// Every caller ID this organization may show (digits only): the numbers it
+// holds, plus JETZT's original env number for the founding org.
+export async function getOrgCallerIds(orgId: string): Promise<Set<string>> {
+  const { data, error } = await supabaseServiceClient
+    .from("phone_numbers")
+    .select("phone_number")
+    .eq("org_id", orgId)
+    .is("released_at", null);
+  if (error) throw new Error(`Couldn't load the organization's numbers: ${error.message}`);
+
+  const ids = new Set((data || []).map((n: { phone_number: string }) => n.phone_number.replace(/\D/g, "")));
+  if (orgId === FOUNDING_ORG_ID && process.env.TELNYX_PHONE_NUMBER) {
+    ids.add(process.env.TELNYX_PHONE_NUMBER.replace(/\D/g, ""));
+  }
+  return ids;
+}
+
+// Ends a live call through Call Control. Used to stop browser calls that
+// didn't come from the dialer (and so skipped its budget and limit checks).
+export async function hangupCall(callControlId: string): Promise<void> {
+  const res = await fetch(
+    `https://api.telnyx.com/v2/calls/${encodeURIComponent(callControlId)}/actions/hangup`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.TELNYX_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+    }
+  );
+  // 422 means the call already ended, which is the outcome we wanted.
+  if (!res.ok && res.status !== 422) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Failed to hang up call (${res.status}): ${body.slice(0, 300)}`);
+  }
 }
 
 // Telnyx's TeXML Calls API is a Twilio-Calls-API-compatible endpoint: same
@@ -175,6 +215,50 @@ export async function searchAvailableNumbers(countryCode: string, areaCode?: str
     monthlyCost: n.cost_information?.monthly_cost ? Number(n.cost_information.monthly_cost) : null,
     upfrontCost: n.cost_information?.upfront_cost ? Number(n.cost_information.upfront_cost) : null,
   }));
+}
+
+// Looks one number up in Telnyx's inventory, to read its real price on the
+// server before buying it (the browser's copy of the price can't be trusted).
+// Null if Telnyx no longer offers it.
+export async function findAvailableNumber(phoneNumber: string, countryCode: string): Promise<AvailableNumber | null> {
+  const digits = phoneNumber.replace(/\D/g, "");
+  if (!digits) return null;
+  const params = new URLSearchParams({
+    "filter[country_code]": countryCode.toUpperCase(),
+    "filter[phone_number][contains]": digits,
+    "filter[limit]": "10",
+  });
+
+  const res = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${process.env.TELNYX_API_KEY}` },
+  });
+  if (!res.ok) return null;
+
+  const match = ((await res.json()).data || []).find(
+    (n: any) => String(n.phone_number || "").replace(/\D/g, "") === digits
+  );
+  if (!match) return null;
+  return {
+    phoneNumber: match.phone_number,
+    phoneNumberType: match.phone_number_type,
+    countryCode: countryCode.toUpperCase(),
+    monthlyCost: match.cost_information?.monthly_cost != null ? Number(match.cost_information.monthly_cost) : null,
+    upfrontCost: match.cost_information?.upfront_cost != null ? Number(match.cost_information.upfront_cost) : null,
+  };
+}
+
+// Gives a number back to Telnyx, which stops its monthly charge. It can't be
+// undone: the number returns to Telnyx's inventory.
+export async function releaseNumber(telnyxId: string): Promise<void> {
+  const res = await fetch(`https://api.telnyx.com/v2/phone_numbers/${encodeURIComponent(telnyxId)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${process.env.TELNYX_API_KEY}` },
+  });
+  // 404: Telnyx no longer has it on the account, which is the goal.
+  if (!res.ok && res.status !== 404) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Releasing the number failed (${res.status}): ${body.slice(0, 300)}`);
+  }
 }
 
 // Numbers must come from a prior search (searchAvailableNumbers) -- Telnyx

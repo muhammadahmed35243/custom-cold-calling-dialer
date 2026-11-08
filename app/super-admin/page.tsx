@@ -34,6 +34,8 @@ type Org = {
   admins: OrgAdmin[];
   agentCount: number;
   numberCount: number;
+  // This month: what the organization pays, and what it cost JETZT at Telnyx.
+  monthSpend: { price: number; cost: number } | null;
 };
 
 // Numbers are kept as strings while editing; empty means "no limit".
@@ -251,6 +253,21 @@ export default function SuperAdminPage() {
                 <dd className="text-foreground">{limit(org.agentCount, org.max_agents)}</dd>
                 <dt className="text-muted-foreground">Phone numbers</dt>
                 <dd className="text-foreground">{limit(org.numberCount, org.max_phone_numbers)}</dd>
+                <dt className="text-muted-foreground">This month</dt>
+                <dd className="text-foreground">
+                  {org.monthSpend === null ? (
+                    "-"
+                  ) : (
+                    <>
+                      ${org.monthSpend.price.toFixed(2)}
+                      {org.monthly_budget_usd !== null && ` of $${Number(org.monthly_budget_usd).toFixed(2)}`}
+                      <span className="block text-xs text-muted-foreground">
+                        Telnyx cost ${org.monthSpend.cost.toFixed(2)} &middot; margin $
+                        {(org.monthSpend.price - org.monthSpend.cost).toFixed(2)}
+                      </span>
+                    </>
+                  )}
+                </dd>
                 <dt className="text-muted-foreground">Monthly budget</dt>
                 <dd className="text-foreground">
                   {org.monthly_budget_usd === null ? "No limit" : `$${Number(org.monthly_budget_usd).toFixed(2)}`}
@@ -509,10 +526,10 @@ function OrgFormDialog({
             <Field label="Agents">
               <input type="number" min={0} step={1} className={inputClass} value={form.max_agents} onChange={(e) => set("max_agents", e.target.value)} />
             </Field>
-            <Field label="Phone numbers">
+            <Field label="Phone numbers" hint="The sub admin buys within this; 0 stops buying">
               <input type="number" min={0} step={1} className={inputClass} value={form.max_phone_numbers} onChange={(e) => set("max_phone_numbers", e.target.value)} />
             </Field>
-            <Field label="Simultaneous calls" hint="Applies once billing is switched on">
+            <Field label="Simultaneous calls">
               <input type="number" min={0} step={1} className={inputClass} value={form.max_concurrent_calls} onChange={(e) => set("max_concurrent_calls", e.target.value)} />
             </Field>
           </div>
@@ -520,7 +537,7 @@ function OrgFormDialog({
 
         <Section
           title="Billing"
-          note="Saved now; budgets and prices apply once billing is switched on. The sub admin only ever sees prices, not your cost or markup."
+          note="Calls and numbers are priced at Telnyx's cost plus these markups; a number's price is fixed when it's bought. The sub admin only ever sees prices, not your cost or markup."
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="Monthly budget (USD)" hint="Calls stop when it's used up">
@@ -535,7 +552,7 @@ function OrgFormDialog({
           </div>
         </Section>
 
-        <Section title="Calling rules" note="Saved now; applied in an upcoming update.">
+        <Section title="Calling rules" note="Allowed countries apply now. Calling hours are saved and apply in an upcoming update.">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-3">
               <Field label="Allowed countries" hint="2-letter codes separated by commas, like US, CA, PK. Empty means every country.">

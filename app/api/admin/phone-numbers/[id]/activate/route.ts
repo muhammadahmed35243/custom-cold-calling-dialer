@@ -16,11 +16,11 @@ export async function POST(
 
   const { data: number } = await supabaseServiceClient
     .from("phone_numbers")
-    .select("id, org_id, phone_number")
+    .select("id, org_id, phone_number, released_at")
     .eq("id", params.id)
     .single();
 
-  if (!number || !canAccessOrg(actor, number.org_id)) {
+  if (!number || !canAccessOrg(actor, number.org_id) || number.released_at) {
     return NextResponse.json({ error: "Number not found" }, { status: 404 });
   }
 

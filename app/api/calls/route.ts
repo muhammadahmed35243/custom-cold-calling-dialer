@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
 import { getActor } from "@/lib/authz";
 import { initiateCall, getOutboundNumberForAgent } from "@/lib/telnyx";
+import { checkCallAllowed } from "@/lib/billing";
 
 export async function GET(req: NextRequest) {
   const { actor, error: authError } = await getActor(req);
@@ -51,8 +52,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Same reason: fail before any writes if the org has no caller ID.
+    let callerId: string;
     try {
-      await getOutboundNumberForAgent(actor.email);
+      callerId = await getOutboundNumberForAgent(actor.email);
     } catch (err) {
       return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 400 });
     }
@@ -76,7 +78,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }
 
+    // The organization's budget, simultaneous-call and country limits, before
+    // anything is written or dialed.
+    const blocked = await checkCallAllowed(actor.org, leadData.phone);
+    if (blocked) {
+      return NextResponse.json({ error: blocked }, { status: 403 });
+    }
+
     // Database-first: create calls record with status=initiating
+    const isBrowser = mode === "webrtc";
     const { data: callRecord, error: createError } = await supabaseServiceClient
       .from("calls")
       .insert([
@@ -85,6 +95,9 @@ export async function POST(req: NextRequest) {
           agent_email: actor.email,
           org_id: actor.orgId,
           started_at: new Date().toISOString(),
+          mode: isBrowser ? "browser" : "phone",
+          caller_id_number: callerId,
+          agent_phone_number: isBrowser ? null : agent.phone_number,
         },
       ])
       .select()
@@ -117,7 +130,7 @@ export async function POST(req: NextRequest) {
     // nothing for the server to dial. Just hand back the row so the
     // frontend can link its WebRTC call to it and report the outcome to
     // /api/calls/[id]/webrtc-complete once it ends.
-    if (mode === "webrtc") {
+    if (isBrowser) {
       return NextResponse.json({ success: true, call: callRecord });
     }
 
@@ -152,6 +165,12 @@ export async function POST(req: NextRequest) {
           assigned_agent: null,
         })
         .eq("id", leadId);
+      // The call never started; close its row so it doesn't count toward the
+      // simultaneous-calls limit.
+      await supabaseServiceClient
+        .from("calls")
+        .update({ ended_at: new Date().toISOString() })
+        .eq("id", callRecord.id);
 
       return NextResponse.json(
         { error: `Telnyx error: ${callError instanceof Error ? callError.message : String(callError)}` },

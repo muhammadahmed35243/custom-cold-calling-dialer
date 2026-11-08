@@ -58,10 +58,10 @@ export async function PATCH(
       // The number must belong to the same organization as the agent.
       const { data: number } = await supabaseServiceClient
         .from("phone_numbers")
-        .select("org_id")
+        .select("org_id, released_at")
         .eq("id", numberId)
         .single();
-      if (!number || number.org_id !== target.org_id) {
+      if (!number || number.org_id !== target.org_id || number.released_at) {
         return NextResponse.json({ error: "That number doesn't belong to this organization" }, { status: 400 });
       }
     }

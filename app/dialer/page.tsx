@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabaseAuth, supabaseClient } from "@/lib/supabase";
 import type { Lead, Call } from "@/lib/supabase";
 import { AppHeader } from "@/components/AppHeader";
+import { BudgetBanner } from "@/components/BudgetBanner";
 import { Avatar } from "@/components/Avatar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StatRow } from "@/components/StatRow";
@@ -854,6 +855,7 @@ export default function DialerPage() {
       <audio ref={remoteAudioRef} autoPlay className="hidden" />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+        <BudgetBanner />
         <div className="mb-8">
           <StatRow
             stats={[

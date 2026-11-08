@@ -43,11 +43,16 @@ export type PhoneNumber = {
   phone_number: string;
   telnyx_id: string;
   country_code: string;
-  monthly_cost: number | null;
-  upfront_cost: number | null;
+  // Telnyx's price (JETZT's cost); only sent to JETZT.
+  monthly_cost?: number | null;
+  upfront_cost?: number | null;
+  // What the organization pays, fixed when bought.
+  monthly_price?: number | null;
+  upfront_price?: number | null;
   is_active: boolean;
   purchased_by: string;
   purchased_at: string;
+  released_at?: string | null;
   org_id: string;
 };
 
@@ -92,6 +97,14 @@ export type Call = {
   transcript: { speaker: "Agent" | "Lead"; startSeconds: number; text: string }[] | null;
   transcript_status: "pending" | "ready" | "failed" | null;
   org_id: string;
+  // Billing (migration 0009).
+  mode?: "phone" | "browser" | null;
+  caller_id_number?: string | null;
+  agent_leg_seconds?: number | null;
+  lead_leg_seconds?: number | null;
+  cost_usd?: number | null;
+  price_usd?: number | null;
+  billed_at?: string | null;
   created_at: string;
   updated_at: string;
   leads?: { id: string; name: string; phone: string; email: string | null } | null;

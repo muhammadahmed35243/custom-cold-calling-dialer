@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
 import { verifyTelnyxSignature } from "@/lib/telnyx";
+import { finalizeCallCost } from "@/lib/billing";
 
 export async function POST(req: NextRequest) {
   const signature = req.headers.get("telnyx-signature-ed25519") || "";
@@ -56,11 +57,19 @@ export async function POST(req: NextRequest) {
     // Update call record
     const updatePayload: Record<string, unknown> = { agent_call_status: agentStatus };
 
-    // Only this handler's own fallback duration/end-time if the call never
-    // reached the Dial step at all (agent never answered) -- otherwise
-    // dial-status already recorded the real lead-leg duration.
+    // The outer call's final status, whatever the outcome.
+    const isFinal = ["completed", "busy", "no-answer", "failed", "canceled"].includes(callStatus);
+    if (isFinal) {
+      // Telnyx's own timing of the leg that rang the agent's phone, which is
+      // billed for the whole session (0 if the agent never picked up).
+      updatePayload.agent_leg_seconds = callDuration > 0 ? callDuration : 0;
+      if (!callRecord.ended_at) updatePayload.ended_at = new Date().toISOString();
+    }
+
+    // Only this handler's own fallback duration if the call never reached the
+    // Dial step at all (agent never answered) -- otherwise dial-status already
+    // recorded the real lead-leg duration.
     if (!alreadyAnswered && callStatus === "completed") {
-      updatePayload.ended_at = new Date().toISOString();
       updatePayload.duration_seconds = callDuration > 0 ? callDuration : null;
     }
 
@@ -73,6 +82,8 @@ export async function POST(req: NextRequest) {
       console.error("Update error:", updateError);
       return new NextResponse(`Update failed: ${updateError.message}`, { status: 500 });
     }
+
+    if (isFinal) await finalizeCallCost(callRecord.id);
 
     return new NextResponse("OK", { status: 200 });
   } catch (error) {

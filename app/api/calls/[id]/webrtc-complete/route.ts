@@ -26,7 +26,6 @@ export async function POST(
       .update({
         agent_call_status: "completed",
         lead_call_status: connected ? "completed" : "no_answer",
-        ended_at: new Date().toISOString(),
         duration_seconds: durationSeconds > 0 ? durationSeconds : null,
       })
       .eq("id", params.id)
@@ -35,6 +34,15 @@ export async function POST(
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Telnyx's hangup webhook records the real end time (used for billing);
+    // the browser's clock only fills it in if that hasn't arrived.
+    await supabaseServiceClient
+      .from("calls")
+      .update({ ended_at: new Date().toISOString() })
+      .eq("id", params.id)
+      .eq("agent_email", actor.email)
+      .is("ended_at", null);
 
     return NextResponse.json({ success: true });
   } catch (error) {

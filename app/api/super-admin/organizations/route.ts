@@ -3,6 +3,7 @@ import { supabaseServiceClient } from "@/lib/supabase";
 import { requireRole, FOUNDING_ORG_ID } from "@/lib/authz";
 import { logAudit } from "@/lib/audit";
 import { parseOrgSettings, VOICE_ONLY_FOUNDING_MESSAGE } from "@/lib/org-settings";
+import { monthSpend } from "@/lib/billing";
 
 type Member = { org_id: string; email: string; display_name: string; role: string; is_active: boolean };
 
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
   const [orgsResult, membersResult, numbersResult] = await Promise.all([
     supabaseServiceClient.from("organizations").select("*").order("created_at", { ascending: true }),
     supabaseServiceClient.from("agents").select("org_id, email, display_name, role, is_active"),
-    supabaseServiceClient.from("phone_numbers").select("org_id"),
+    supabaseServiceClient.from("phone_numbers").select("org_id").is("released_at", null),
   ]);
 
   const failed = orgsResult.error || membersResult.error || numbersResult.error;
@@ -23,8 +24,20 @@ export async function GET(req: NextRequest) {
   const members = (membersResult.data || []) as Member[];
   const numbers = numbersResult.data || [];
 
-  const organizations = (orgsResult.data || []).map((org) => {
+  // This month's spend per organization: what it pays, what it cost JETZT.
+  // A failure here leaves the card without figures rather than failing the page.
+  const spends = await Promise.all(
+    (orgsResult.data || []).map((org) =>
+      monthSpend(org.id).catch((err) => {
+        console.error("super-admin: couldn't read spend", { orgId: org.id, err });
+        return null;
+      })
+    )
+  );
+
+  const organizations = (orgsResult.data || []).map((org, i) => {
     const orgMembers = members.filter((m) => m.org_id === org.id);
+    const spend = spends[i];
     return {
       ...org,
       isFounding: org.id === FOUNDING_ORG_ID,
@@ -33,6 +46,7 @@ export async function GET(req: NextRequest) {
         .map((m) => ({ email: m.email, display_name: m.display_name, role: m.role, is_active: m.is_active })),
       agentCount: orgMembers.filter((m) => m.role === "agent").length,
       numberCount: numbers.filter((n) => n.org_id === org.id).length,
+      monthSpend: spend ? { price: spend.totalPrice, cost: spend.totalCost } : null,
     };
   });
 

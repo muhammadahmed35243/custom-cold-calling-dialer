@@ -16,6 +16,8 @@ import { InsightsTab } from "@/components/admin/InsightsTab";
 import { MessagesTab } from "@/components/admin/MessagesTab";
 import { BookingsTab } from "@/components/admin/BookingsTab";
 import { PhoneNumbersTab } from "@/components/admin/PhoneNumbersTab";
+import { UsageTab } from "@/components/admin/UsageTab";
+import { BudgetBanner, type BudgetInfo } from "@/components/BudgetBanner";
 import { authedFetch } from "@/lib/voice-agent/authedFetch";
 import type { PhoneNumber } from "@/lib/supabase";
 import { isAdminRole } from "@/lib/roles";
@@ -26,6 +28,7 @@ type Me = {
   email: string;
   role: string;
   canBuyNumbers: boolean;
+  budget: BudgetInfo;
   org: { id: string; name: string; voiceAssistantEnabled: boolean };
 };
 
@@ -33,7 +36,7 @@ type Me = {
 // any organization opened from the console (/admin?orgId=...).
 type ViewedOrg = { id: string; name: string; voiceAssistantEnabled: boolean; isOwn: boolean };
 
-type Tab = "calls" | "agents" | "phone-numbers" | "voice-calls" | "instructions" | "knowledge-base" | "insights" | "messages" | "bookings";
+type Tab = "calls" | "agents" | "phone-numbers" | "usage" | "voice-calls" | "instructions" | "knowledge-base" | "insights" | "messages" | "bookings";
 
 const VOICE_AGENT_TABS: { key: Tab; label: string }[] = [
   { key: "voice-calls", label: "Voice Agent Calls" },
@@ -179,6 +182,9 @@ export default function AdminDashboard() {
           viewedOrg && <h1 className="text-lg font-semibold text-foreground mb-4 tracking-tight">{viewedOrg.name}</h1>
         )}
 
+        {/* Own organization only; another organization's spend is on its Usage tab. */}
+        <BudgetBanner budget={viewedOrg?.isOwn ? me?.budget ?? null : null} />
+
         <div className="flex gap-1 mb-6 border-b border-border">
           <button
             onClick={() => setTab("calls")}
@@ -209,6 +215,16 @@ export default function AdminDashboard() {
             }`}
           >
             Phone Numbers
+          </button>
+          <button
+            onClick={() => setTab("usage")}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              tab === "usage"
+                ? "text-foreground border-brand"
+                : "text-muted-foreground border-transparent hover:text-foreground"
+            }`}
+          >
+            Usage
           </button>
           {viewedOrg?.voiceAssistantEnabled && VOICE_AGENT_TABS.map(({ key, label }) => (
             <button
@@ -287,6 +303,7 @@ export default function AdminDashboard() {
           />
         )}
         {tab === "phone-numbers" && <PhoneNumbersTab orgQuery={orgQuery} canBuy={!!me?.canBuyNumbers} />}
+        {tab === "usage" && <UsageTab orgQuery={orgQuery} />}
         {tab === "voice-calls" && <VoiceCallsTab />}
         {tab === "instructions" && <InstructionsTab />}
         {tab === "knowledge-base" && <KnowledgeBaseTab />}
