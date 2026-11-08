@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const showCost = canSeeCosts(actor);
-    const found = await searchAvailableNumbers({
+    const { numbers: found, closeMatches } = await searchAvailableNumbers({
       countryCode,
       areaCode: areaCode || undefined,
       locality: city || undefined,
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
       upfrontPrice: numberPrice(n.upfrontCost, org.number_markup_pct),
       ...(showCost ? { monthlyCost: n.monthlyCost, upfrontCost: n.upfrontCost } : {}),
     }));
-    return NextResponse.json({ numbers });
+    return NextResponse.json({ numbers, closeMatches });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : String(error) },

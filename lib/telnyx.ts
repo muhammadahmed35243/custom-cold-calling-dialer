@@ -243,7 +243,23 @@ function toAvailableNumber(n: any, countryCode: string): AvailableNumber {
   };
 }
 
-export async function searchAvailableNumbers(search: NumberSearch): Promise<AvailableNumber[]> {
+async function queryAvailableNumbers(params: URLSearchParams): Promise<{ res: Response; body: any }> {
+  const res = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${process.env.TELNYX_API_KEY}` },
+  });
+  return { res, body: await res.json().catch(() => ({})) };
+}
+
+// Telnyx answers "nothing matches" with error 10031 instead of an empty list.
+function isNoMatch(res: Response, body: any): boolean {
+  return !res.ok && (body?.errors || []).some((e: any) => String(e?.code) === "10031");
+}
+
+// closeMatches: nothing matched every filter, so these are the closest
+// numbers Telnyx suggested (each also has bestEffort set).
+export async function searchAvailableNumbers(
+  search: NumberSearch
+): Promise<{ numbers: AvailableNumber[]; closeMatches: boolean }> {
   const params = new URLSearchParams({
     "filter[country_code]": search.countryCode.toUpperCase(),
     "filter[limit]": String(SEARCH_LIMIT),
@@ -255,19 +271,26 @@ export async function searchAvailableNumbers(search: NumberSearch): Promise<Avai
   if (search.contains) params.set("filter[phone_number][contains]", search.contains);
   for (const feature of search.features || []) params.append("filter[features][]", feature);
 
-  const res = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?${params.toString()}`, {
-    headers: { Authorization: `Bearer ${process.env.TELNYX_API_KEY}` },
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(`Number search failed (${res.status}): ${JSON.stringify(data).slice(0, 300)}`);
+  let { res, body } = await queryAvailableNumbers(params);
+  let closeMatches = false;
+  if (isNoMatch(res, body)) {
+    // No exact match: ask Telnyx for its closest numbers instead.
+    params.set("filter[best_effort]", "true");
+    ({ res, body } = await queryAvailableNumbers(params));
+    if (isNoMatch(res, body)) return { numbers: [], closeMatches: false };
+    closeMatches = true;
   }
 
-  const numbers: AvailableNumber[] = (data.data || []).map((n: any) => toAvailableNumber(n, search.countryCode));
+  if (!res.ok) {
+    const detail = body?.errors?.[0]?.detail || body?.errors?.[0]?.title || `error ${res.status}`;
+    throw new Error(`Telnyx couldn't search for numbers: ${detail}`);
+  }
+
+  const found: AvailableNumber[] = (body.data || []).map((n: any) => toAvailableNumber(n, search.countryCode));
   // Telnyx doesn't reliably apply the features filter, so enforce it here.
   const wanted = search.features || [];
-  return wanted.length ? numbers.filter((n) => wanted.every((f) => n.features.includes(f))) : numbers;
+  const numbers = wanted.length ? found.filter((n) => wanted.every((f) => n.features.includes(f))) : found;
+  return { numbers, closeMatches: closeMatches && numbers.length > 0 };
 }
 
 // Looks one number up in Telnyx's inventory, to read its real price on the

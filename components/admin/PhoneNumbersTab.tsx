@@ -104,6 +104,8 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
   const [filters, setFilters] = useState<SearchFilters>(EMPTY_FILTERS);
   const [searchedFor, setSearchedFor] = useState<SearchFilters | null>(null);
   const [searchResults, setSearchResults] = useState<AvailableNumber[] | null>(null);
+  // Nothing matched every filter, so the results are Telnyx's closest numbers.
+  const [closeMatches, setCloseMatches] = useState(false);
   const [sort, setSort] = useState<Sort>("price-asc");
   const [maxMonthly, setMaxMonthly] = useState("");
   const [searching, setSearching] = useState(false);
@@ -175,6 +177,7 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
       const body = await res.json();
       if (res.ok) {
         setSearchResults(body.numbers || []);
+        setCloseMatches(!!body.closeMatches);
         setSearchedFor(query);
       } else {
         setError(body.error || "Search failed");
@@ -478,6 +481,13 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
                   </div>
                 </div>
               </div>
+
+              {closeMatches && searchResults.length > 0 && (
+                <div className="p-3 rounded-lg border border-brand/30 bg-brand/10 text-sm text-foreground">
+                  No numbers matched all your filters, so these are the closest Telnyx has. Check each one&apos;s area
+                  and type before buying.
+                </div>
+              )}
 
               {searchResults.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
