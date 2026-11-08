@@ -10,6 +10,10 @@ export { ADMIN_ROLES, type Role };
 // only to this org.
 export const FOUNDING_ORG_ID = "00000000-0000-0000-0000-000000000001";
 
+// The one super admin (also pinned by a database constraint, migration 0007).
+// Messages sent to JETZT are emailed here.
+export const SUPER_ADMIN_EMAIL = "contact.thejetzt@gmail.com";
+
 export type Organization = {
   id: string;
   name: string;

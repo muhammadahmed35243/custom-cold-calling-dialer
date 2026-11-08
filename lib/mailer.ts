@@ -57,7 +57,10 @@ export async function sendMail(
   to: string,
   subject: string,
   text: string,
-  from?: { name: string; address: string }
+  from?: { name: string; address: string },
+  // replyTo: where a reply goes (e.g. the person who wrote in).
+  // saveToSent: false for notifications that shouldn't clutter the Sent folder.
+  options: { replyTo?: string; saveToSent?: boolean } = {}
 ) {
   const fromName = from?.name || process.env.SMTP_FROM_NAME || "JETZT";
   // Auth always uses the one shared mailbox account -- only the From header
@@ -69,9 +72,11 @@ export async function sendMail(
     to,
     subject,
     text,
+    ...(options.replyTo ? { replyTo: options.replyTo } : {}),
   };
 
   await getTransporter().sendMail(mailOptions);
+  if (options.saveToSent === false) return;
 
   try {
     const raw: Buffer = await new Promise((resolve, reject) => {

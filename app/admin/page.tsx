@@ -17,6 +17,7 @@ import { MessagesTab } from "@/components/admin/MessagesTab";
 import { BookingsTab } from "@/components/admin/BookingsTab";
 import { PhoneNumbersTab } from "@/components/admin/PhoneNumbersTab";
 import { UsageTab } from "@/components/admin/UsageTab";
+import { SupportTab } from "@/components/admin/SupportTab";
 import { BudgetBanner, type BudgetInfo } from "@/components/BudgetBanner";
 import { authedFetch } from "@/lib/voice-agent/authedFetch";
 import type { PhoneNumber } from "@/lib/supabase";
@@ -36,7 +37,7 @@ type Me = {
 // any organization opened from the console (/admin?orgId=...).
 type ViewedOrg = { id: string; name: string; voiceAssistantEnabled: boolean; isOwn: boolean };
 
-type Tab = "calls" | "agents" | "phone-numbers" | "usage" | "voice-calls" | "instructions" | "knowledge-base" | "insights" | "messages" | "bookings";
+type Tab = "calls" | "agents" | "phone-numbers" | "usage" | "support" | "voice-calls" | "instructions" | "knowledge-base" | "insights" | "messages" | "bookings";
 
 const VOICE_AGENT_TABS: { key: Tab; label: string }[] = [
   { key: "voice-calls", label: "Voice Agent Calls" },
@@ -226,6 +227,18 @@ export default function AdminDashboard() {
           >
             Usage
           </button>
+          {me?.role !== "super_admin" && (
+            <button
+              onClick={() => setTab("support")}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                tab === "support"
+                  ? "text-foreground border-brand"
+                  : "text-muted-foreground border-transparent hover:text-foreground"
+              }`}
+            >
+              Contact JETZT
+            </button>
+          )}
           {viewedOrg?.voiceAssistantEnabled && VOICE_AGENT_TABS.map(({ key, label }) => (
             <button
               key={key}
@@ -304,6 +317,7 @@ export default function AdminDashboard() {
         )}
         {tab === "phone-numbers" && <PhoneNumbersTab orgQuery={orgQuery} canBuy={!!me?.canBuyNumbers} />}
         {tab === "usage" && <UsageTab orgQuery={orgQuery} />}
+        {tab === "support" && me?.role !== "super_admin" && <SupportTab />}
         {tab === "voice-calls" && <VoiceCallsTab />}
         {tab === "instructions" && <InstructionsTab />}
         {tab === "knowledge-base" && <KnowledgeBaseTab />}

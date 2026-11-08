@@ -10,6 +10,7 @@ import { JetztLogo } from "@/components/Logo";
 import { Avatar } from "@/components/Avatar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PhoneIcon, UploadIcon, UsersIcon, CheckCircleIcon } from "@/components/icons";
+import { ContactForm } from "@/components/ContactForm";
 
 export const dynamic = "force-dynamic";
 
@@ -113,7 +114,7 @@ function Homepage() {
               Sign In
             </Link>
             <a
-              href="mailto:contact@thejetzt.com"
+              href="#contact"
               className="w-full sm:w-auto text-center bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium px-6 py-3 rounded-lg transition-colors"
             >
               Talk to us
@@ -291,24 +292,32 @@ function Homepage() {
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto px-6 py-24 text-center">
-        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Ready to call smarter?</h2>
-        <p className="text-muted-foreground mt-3 max-w-xl mx-auto">
-          Sign in if your team is already set up, or get in touch if you&apos;re interested in JETZT Dialer.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
-          <Link
-            href="/auth/login"
-            className="w-full sm:w-auto text-center bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-6 py-3 rounded-lg transition-all active:translate-y-px"
-          >
-            Sign In
-          </Link>
-          <a
-            href="mailto:contact@thejetzt.com"
-            className="w-full sm:w-auto text-center bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium px-6 py-3 rounded-lg transition-colors"
-          >
-            contact@thejetzt.com
-          </a>
+      <section id="contact" className="max-w-6xl mx-auto px-6 py-24 scroll-mt-16">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 items-start">
+          <div className="lg:col-span-2 text-center lg:text-left">
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Ready to call smarter?</h2>
+            <p className="text-muted-foreground mt-3">
+              Tell us about your team and we&apos;ll get back to you with a setup that fits. Already using JETZT
+              Dialer? Sign in to get started.
+            </p>
+            <div className="mt-8">
+              <Link
+                href="/auth/login"
+                className="inline-block w-full sm:w-auto text-center bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-6 py-3 rounded-lg transition-all active:translate-y-px"
+              >
+                Sign In
+              </Link>
+            </div>
+            <p className="text-sm text-muted-foreground mt-6">
+              Prefer email?{" "}
+              <a href="mailto:contact@thejetzt.com" className="text-foreground underline underline-offset-2 hover:no-underline">
+                contact@thejetzt.com
+              </a>
+            </p>
+          </div>
+          <div className="lg:col-span-3">
+            <ContactForm />
+          </div>
         </div>
       </section>
 

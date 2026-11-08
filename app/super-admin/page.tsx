@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { useAppReady } from "@/components/AppReadyContext";
 import { BrandedLoader } from "@/components/BrandedLoader";
 import { authedFetch } from "@/lib/voice-agent/authedFetch";
+import { MessagesPanel } from "@/components/super-admin/MessagesPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -136,6 +137,8 @@ export default function SuperAdminPage() {
   const [editing, setEditing] = useState<Org | "new" | null>(null);
   const [confirmingSuspend, setConfirmingSuspend] = useState<string | null>(null);
   const [busyOrgId, setBusyOrgId] = useState<string | null>(null);
+  const [view, setView] = useState<"orgs" | "messages">("orgs");
+  const [newMessages, setNewMessages] = useState(0);
 
   const loadOrgs = useCallback(async () => {
     const res = await authedFetch("/api/super-admin/organizations");
@@ -166,6 +169,13 @@ export default function SuperAdminPage() {
         setReady();
         return;
       }
+      // The notification emails link to /super-admin?tab=messages.
+      if (new URLSearchParams(window.location.search).get("tab") === "messages") setView("messages");
+      // How many messages are waiting, for the tab's badge.
+      authedFetch("/api/super-admin/messages?status=new")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((body) => body && setNewMessages(body.newCount ?? 0))
+        .catch(() => {});
       setLoading(false);
       setReady();
     })();
@@ -202,6 +212,34 @@ export default function SuperAdminPage() {
       <AppHeader userEmail={user?.email} role="super_admin" onSignOut={handleSignOut} />
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        <div className="flex gap-1 border-b border-border">
+          {(
+            [
+              ["orgs", "Organizations"],
+              ["messages", "Messages"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                view === key ? "text-foreground border-brand" : "text-muted-foreground border-transparent hover:text-foreground"
+              }`}
+            >
+              {label}
+              {key === "messages" && newMessages > 0 && (
+                <span className="text-[11px] font-semibold bg-brand text-white rounded-full px-1.5 min-w-[1.25rem] text-center">
+                  {newMessages}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {view === "messages" ? (
+          <MessagesPanel onNewCountChange={setNewMessages} />
+        ) : (
+        <>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-lg font-semibold text-foreground tracking-tight">Organizations</h1>
@@ -344,6 +382,8 @@ export default function SuperAdminPage() {
             </div>
           ))}
         </div>
+        </>
+        )}
       </main>
 
       {editing && (

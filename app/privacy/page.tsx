@@ -56,6 +56,13 @@ export default function PrivacyPolicyPage() {
           they say so the assistant can understand and reply, and we keep a record of the call, any message the caller
           leaves and any appointment they book.
         </p>
+        <h3>Messages you send us</h3>
+        <p>
+          When you use the contact form on our homepage or message JETZT from the admin portal, we receive your name,
+          email address and what you write, plus your company and phone number if you add them. We use them to reply
+          and keep them as a record of the conversation. For the homepage form we also keep a one-way hash of your IP
+          address, never the address itself, to limit spam.
+        </p>
         <h3>Technical information</h3>
         <p>
           Like most websites, our servers log IP addresses, browser type and request details to run and secure the
