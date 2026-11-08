@@ -63,7 +63,7 @@ export function CallDialog({
           <div>
             <div className="text-base font-semibold text-foreground">{leadName}</div>
             <div className="text-sm text-muted-foreground font-mono">{leadPhone}</div>
-            <div className="text-sm font-medium text-brand mt-1">{status}</div>
+            <div className="text-sm font-medium text-brand-strong mt-1">{status}</div>
           </div>
         </div>
 
@@ -75,7 +75,7 @@ export function CallDialog({
             onChange={(e) => onNotesChange(e.target.value)}
             rows={5}
             placeholder="Jot down what the lead says (saved automatically)"
-            className="mt-2 w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+            className="field mt-2"
           />
         </div>
 

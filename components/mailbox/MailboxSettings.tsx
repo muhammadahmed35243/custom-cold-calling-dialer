@@ -40,7 +40,7 @@ type MailboxInfo = {
 };
 
 const inputClass =
-  "w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring";
+  "field";
 
 function providerLabel(m: MailboxSummary) {
   if (m.kind === "google_oauth") return "Google (signed in with Google)";
@@ -224,7 +224,7 @@ export function MailboxSettings({
   };
 
   return (
-    <section className="bg-card border border-border rounded-xl p-6 space-y-4">
+    <section className="card p-6 space-y-4">
       <div>
         <h2 className="text-sm font-semibold text-foreground">
           {scope === "own" ? "Your mailbox" : "Organization mailbox"}
@@ -332,7 +332,7 @@ export function MailboxSettings({
                     value={entry.access}
                     disabled={savingAccess === entry.agentId}
                     onChange={(e) => setAccess(entry, e.target.value as SharedAccess)}
-                    className="px-2 py-1.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50"
+                    className="px-2 py-1.5 border border-input rounded-md bg-card text-foreground shadow-soft text-sm focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 disabled:opacity-50"
                   >
                     <option value="full">Whole mailbox</option>
                     <option value="alias" disabled={!entry.alias}>

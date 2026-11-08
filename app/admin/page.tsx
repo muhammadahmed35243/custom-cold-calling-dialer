@@ -156,7 +156,7 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-screen bg-background">
         <AppHeader userEmail={user?.email} role={me?.role} onSignOut={handleSignOut} />
-        <main className="max-w-7xl mx-auto px-6 py-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
             {loadError}
           </div>
@@ -169,7 +169,7 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-background">
       <AppHeader userEmail={user?.email} role={me?.role} onSignOut={handleSignOut} />
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {viewedOrg && !viewedOrg.isOwn ? (
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand/30 bg-brand/10 px-4 py-3 text-sm text-foreground">
             <span>
@@ -190,65 +190,41 @@ export default function AdminDashboard() {
         <BudgetBanner budget={viewedOrg?.isOwn ? me?.budget ?? null : null} />
         <MailboxNotice />
 
-        <div className="flex gap-1 mb-6 border-b border-border">
+        <div className="tabbar mb-6">
           <button
             onClick={() => setTab("calls")}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === "calls"
-                ? "text-foreground border-brand"
-                : "text-muted-foreground border-transparent hover:text-foreground"
-            }`}
+            className={`tab ${tab === "calls" ? "tab-active" : ""}`}
           >
             All Calls ({calls.length})
           </button>
           <button
             onClick={() => setTab("agents")}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === "agents"
-                ? "text-foreground border-brand"
-                : "text-muted-foreground border-transparent hover:text-foreground"
-            }`}
+            className={`tab ${tab === "agents" ? "tab-active" : ""}`}
           >
             Manage Agents ({agents.length})
           </button>
           <button
             onClick={() => setTab("phone-numbers")}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === "phone-numbers"
-                ? "text-foreground border-brand"
-                : "text-muted-foreground border-transparent hover:text-foreground"
-            }`}
+            className={`tab ${tab === "phone-numbers" ? "tab-active" : ""}`}
           >
             Phone Numbers
           </button>
           <button
             onClick={() => setTab("usage")}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === "usage"
-                ? "text-foreground border-brand"
-                : "text-muted-foreground border-transparent hover:text-foreground"
-            }`}
+            className={`tab ${tab === "usage" ? "tab-active" : ""}`}
           >
             Usage
           </button>
           <button
             onClick={() => setTab("mailbox")}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === "mailbox"
-                ? "text-foreground border-brand"
-                : "text-muted-foreground border-transparent hover:text-foreground"
-            }`}
+            className={`tab ${tab === "mailbox" ? "tab-active" : ""}`}
           >
             Mailbox
           </button>
           {me?.role !== "super_admin" && (
             <button
               onClick={() => setTab("support")}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                tab === "support"
-                  ? "text-foreground border-brand"
-                  : "text-muted-foreground border-transparent hover:text-foreground"
-              }`}
+              className={`tab ${tab === "support" ? "tab-active" : ""}`}
             >
               Contact JETZT
             </button>
@@ -257,11 +233,7 @@ export default function AdminDashboard() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                tab === key
-                  ? "text-foreground border-brand"
-                  : "text-muted-foreground border-transparent hover:text-foreground"
-              }`}
+              className={`tab ${tab === key ? "tab-active" : ""}`}
             >
               {label}
             </button>
@@ -269,7 +241,7 @@ export default function AdminDashboard() {
         </div>
 
         {tab === "calls" && (
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="card overflow-hidden">
             <table className="w-full">
               <thead className="bg-muted border-b border-border">
                 <tr>
@@ -499,7 +471,7 @@ function AgentManagement({
 
   return (
     <div className="space-y-6">
-      <div className="bg-card border border-border rounded-xl p-6">
+      <div className="card p-6">
         <h2 className="text-sm font-semibold text-foreground mb-4">Add New Agent</h2>
         <form onSubmit={handleAddAgent} className="space-y-3">
           <input
@@ -508,7 +480,7 @@ function AgentManagement({
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
             required
-            className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+            className="field"
           />
           <input
             type="text"
@@ -516,21 +488,21 @@ function AgentManagement({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             required
-            className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+            className="field"
           />
           <input
             type="tel"
             placeholder="Phone Number (optional, E.164: +923001234567)"
             value={newPhone}
             onChange={(e) => setNewPhone(e.target.value)}
-            className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+            className="field"
           />
           <input
             type="email"
             placeholder="Mailbox Alias (optional, e.g. name@thejetzt.com)"
             value={newAlias}
             onChange={(e) => setNewAlias(e.target.value)}
-            className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+            className="field"
           />
           {error && <div className="text-sm text-destructive">{error}</div>}
           <button
@@ -545,7 +517,7 @@ function AgentManagement({
 
       {/* Scrolls sideways when the window is too narrow for all seven
           columns, so Actions is never cut off. */}
-      <div className="bg-card border border-border rounded-xl overflow-x-auto">
+      <div className="card overflow-x-auto">
         <table className="w-full">
           <thead className="bg-muted border-b border-border">
             <tr>
@@ -584,7 +556,7 @@ function AgentManagement({
                         value={aliasDraft}
                         onChange={(e) => setAliasDraft(e.target.value)}
                         placeholder="name@thejetzt.com"
-                        className="px-2 py-1 border border-border rounded-md bg-background text-foreground text-xs w-40 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                        className="px-2 py-1 border border-input rounded-md bg-card text-foreground shadow-soft text-xs w-40 focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15"
                       />
                       <button
                         onClick={() => saveAlias(agent)}
@@ -614,7 +586,7 @@ function AgentManagement({
                     value={agent.outbound_phone_number_id || ""}
                     onChange={(e) => handleAssignNumber(agent, e.target.value)}
                     disabled={busyAgentId === agent.id}
-                    className="px-2 py-1 border border-border rounded-md bg-background text-foreground text-xs disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                    className="px-2 py-1 border border-input rounded-md bg-card text-foreground shadow-soft text-xs disabled:opacity-40 focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15"
                   >
                     <option value="">Default (active number)</option>
                     {phoneNumbers.map((n) => (

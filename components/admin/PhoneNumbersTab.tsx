@@ -62,7 +62,7 @@ const FEATURE_FILTERS: [string, string][] = [
 const EMPTY_FILTERS: SearchFilters = { country: "US", type: "", areaCode: "", city: "", state: "", contains: "", features: [] };
 
 const inputClass =
-  "w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring";
+  "field";
 
 function formatMoney(n: number | null | undefined) {
   return n === null || n === undefined ? "-" : `$${Number(n).toFixed(2)}`;
@@ -290,14 +290,14 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
       )}
 
       {!canBuy ? (
-        <div className="bg-card border border-border rounded-xl p-6">
+        <div className="card p-6">
           <h2 className="text-sm font-semibold text-foreground mb-1">Need a number?</h2>
           <p className="text-sm text-muted-foreground">
             Your organization can&apos;t buy numbers right now. Ask JETZT to raise your number limit.
           </p>
         </div>
       ) : (
-        <div className="bg-card border border-border rounded-xl p-6">
+        <div className="card p-6">
           <h2 className="text-sm font-semibold text-foreground mb-1">Buy a Number</h2>
           <p className="text-xs text-muted-foreground mb-4">
             Search available numbers. Prices vary a lot by country, area and type &mdash; check before buying. Numbers
@@ -619,7 +619,7 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
         </div>
       )}
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="card overflow-hidden">
         <div className="px-6 py-4 border-b border-border">
           <h2 className="text-sm font-semibold text-foreground">
             Owned Numbers{limit !== null && !loadingOwned ? ` (${owned.length} of ${limit})` : ""}

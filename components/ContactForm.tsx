@@ -8,7 +8,7 @@ type Fields = { name: string; email: string; company: string; phone: string; mes
 const EMPTY: Fields = { name: "", email: "", company: "", phone: "", message: "", website: "" };
 
 const inputClass =
-  "w-full px-3 py-2.5 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring";
+  "field";
 
 // The homepage's "get in touch" form. Goes to JETZT's inbox (super admin
 // console and email) through /api/contact.

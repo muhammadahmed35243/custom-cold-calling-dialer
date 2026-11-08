@@ -85,7 +85,7 @@ function csvCell(value: unknown) {
 
 function Card({ label, value, sub, children }: { label: string; value: string; sub?: string; children?: React.ReactNode }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-5">
+    <div className="card p-5">
       <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</div>
       <div className="text-2xl font-semibold text-foreground mt-1 tabular-nums">{value}</div>
       {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
@@ -203,7 +203,7 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
             value={month}
             max={currentMonth()}
             onChange={(e) => e.target.value && setMonth(e.target.value)}
-            className="px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+            className="px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15"
           />
         </div>
         <button
@@ -279,7 +279,7 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
               )}
             </div>
 
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="card overflow-hidden">
               <div className="px-6 py-4 border-b border-border">
                 <h2 className="text-sm font-semibold text-foreground">Calls</h2>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -348,7 +348,7 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
             </div>
 
             {usage.numbers.length > 0 && (
-              <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="card overflow-hidden">
                 <div className="px-6 py-4 border-b border-border">
                   <h2 className="text-sm font-semibold text-foreground">Phone numbers</h2>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -395,7 +395,7 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
             )}
 
             {usage.grants.length > 0 && (
-              <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="card overflow-hidden">
                 <div className="px-6 py-4 border-b border-border">
                   <h2 className="text-sm font-semibold text-foreground">Free credit &amp; bonus minutes from JETZT</h2>
                   <p className="text-xs text-muted-foreground mt-1">

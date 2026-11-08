@@ -211,7 +211,7 @@ export default function MailPage() {
     <div className="min-h-screen bg-background">
       <AppHeader userEmail={user?.email} role={agentInfo?.role} onSignOut={handleSignOut} />
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <MailboxNotice />
         {mailboxProblem ? (
           <div className="space-y-6 max-w-3xl">
@@ -228,7 +228,7 @@ export default function MailPage() {
               >
                 Compose
               </button>
-              <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="card overflow-hidden">
                 {FOLDERS.map((f) => (
                   <button
                     key={f}
@@ -243,7 +243,7 @@ export default function MailPage() {
               </div>
               <button
                 onClick={() => setShowSettings((open) => !open)}
-                className="w-full text-left px-4 py-3 text-sm bg-card border border-border rounded-xl text-foreground hover:bg-muted/50 transition-colors"
+                className="w-full text-left px-4 py-3 text-sm card text-foreground hover:bg-muted/50 transition-colors"
               >
                 {showSettings ? "← Back to mail" : "Mailbox settings"}
               </button>
@@ -263,7 +263,7 @@ export default function MailPage() {
               {showSettings ? (
                 settings
               ) : (
-              <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="card overflow-hidden">
                 <div className="bg-muted px-6 py-3.5 border-b border-border">
                   <h3 className="text-sm font-semibold text-foreground">{folder}</h3>
                 </div>
@@ -309,7 +309,7 @@ export default function MailPage() {
 
       {(loadingMessage || selectedMessage) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4">
-          <div className="bg-card border border-border rounded-xl shadow-sm p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+          <div className="card shadow-sm p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
             {loadingMessage ? (
               <div className="text-center text-sm text-muted-foreground py-8">Loading...</div>
             ) : selectedMessage ? (
@@ -367,7 +367,7 @@ export default function MailPage() {
 
       {composeOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4">
-          <div className="bg-card border border-border rounded-xl shadow-sm p-6 w-full max-w-lg">
+          <div className="card shadow-sm p-6 w-full max-w-lg">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-foreground">Compose</h3>
               <button
@@ -384,21 +384,21 @@ export default function MailPage() {
                 value={composeDraft.to}
                 onChange={(e) => setComposeDraft({ ...composeDraft, to: e.target.value })}
                 placeholder="To"
-                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                className="field"
               />
               <input
                 type="text"
                 value={composeDraft.subject}
                 onChange={(e) => setComposeDraft({ ...composeDraft, subject: e.target.value })}
                 placeholder="Subject"
-                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                className="field"
               />
               <textarea
                 value={composeDraft.body}
                 onChange={(e) => setComposeDraft({ ...composeDraft, body: e.target.value })}
                 placeholder="Message"
                 rows={9}
-                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                className="field"
               />
 
               {composeError && <div className="text-sm text-destructive">{composeError}</div>}

@@ -38,7 +38,7 @@ export function VoiceCallsTab() {
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
+    <div className="card overflow-hidden">
       <table className="w-full">
         <thead className="bg-muted border-b border-border">
           <tr>
@@ -89,7 +89,7 @@ export function VoiceCallsTab() {
                         <div key={i} className="text-sm">
                           <span
                             className={`font-medium ${
-                              turn.role === "agent" ? "text-brand" : "text-foreground"
+                              turn.role === "agent" ? "text-brand-strong" : "text-foreground"
                             }`}
                           >
                             {turn.role === "agent" ? "Agent" : "Caller"}:

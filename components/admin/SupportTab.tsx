@@ -34,7 +34,7 @@ const STATUS: Record<SupportMessage["status"], { label: string; className: strin
 };
 
 const inputClass =
-  "w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring";
+  "field";
 
 // The admin portal's way to reach JETZT: change requests, problems and
 // billing questions. Each message reaches the super admin's console and
@@ -94,7 +94,7 @@ export function SupportTab() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
-      <form onSubmit={send} className="lg:col-span-3 bg-card border border-border rounded-xl p-6 space-y-4">
+      <form onSubmit={send} className="lg:col-span-3 card p-6 space-y-4">
         <div>
           <h2 className="text-sm font-semibold text-foreground">Contact JETZT</h2>
           <p className="text-xs text-muted-foreground mt-1">
@@ -171,7 +171,7 @@ export function SupportTab() {
         </button>
       </form>
 
-      <section className="lg:col-span-2 bg-card border border-border rounded-xl overflow-hidden">
+      <section className="lg:col-span-2 card overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
           <h2 className="text-sm font-semibold text-foreground">Your messages</h2>
           <p className="text-xs text-muted-foreground mt-1">Everyone in your organization&apos;s admin team sees these.</p>

@@ -43,7 +43,7 @@ export function MessagesTab() {
         </div>
       )}
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="card overflow-hidden">
         <table className="w-full">
           <thead className="bg-muted border-b border-border">
             <tr>
@@ -64,7 +64,7 @@ export function MessagesTab() {
                 <td className="px-6 py-4 text-sm">
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
-                      msg.status === "open" ? "bg-brand/15 text-brand" : "bg-muted text-muted-foreground"
+                      msg.status === "open" ? "bg-brand-soft text-brand-strong" : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {msg.status}

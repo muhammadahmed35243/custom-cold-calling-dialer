@@ -59,7 +59,7 @@ export function InstructionsTab() {
         </div>
       )}
 
-      <div className="bg-card border border-border rounded-xl p-6">
+      <div className="card p-6">
         <h2 className="text-sm font-semibold text-foreground mb-1">Core Instructions</h2>
         <p className="text-xs text-muted-foreground mb-4">
           Tone, policy, how the agent should handle things. Changes rarely — always injected into every call.
@@ -68,7 +68,7 @@ export function InstructionsTab() {
           value={coreInstructions}
           onChange={(e) => setCoreInstructions(e.target.value)}
           rows={8}
-          className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring font-mono"
+          className="field font-mono"
         />
         <div className="mt-3 flex items-center gap-3">
           <button
@@ -84,7 +84,7 @@ export function InstructionsTab() {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-6">
+      <div className="card p-6">
         <h2 className="text-sm font-semibold text-foreground mb-1">Timely Info</h2>
         <p className="text-xs text-muted-foreground mb-4">
           Today&apos;s hours, a closure, a current promo. Also always injected — kept separate from the knowledge base
@@ -94,7 +94,7 @@ export function InstructionsTab() {
           value={timelyInfo}
           onChange={(e) => setTimelyInfo(e.target.value)}
           rows={5}
-          className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring font-mono"
+          className="field font-mono"
         />
         <div className="mt-3 flex items-center gap-3">
           <button

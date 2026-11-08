@@ -18,7 +18,7 @@ export function LegalPage({
     <div className="min-h-screen bg-background">
       <MarkReady />
       <header className="border-b border-border">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <Link href="/" aria-label="JETZT Dialer home">
             <JetztLogo className="h-7 w-auto" />
           </Link>
@@ -28,7 +28,7 @@ export function LegalPage({
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">Last updated {updated}</p>
 
@@ -38,7 +38,7 @@ export function LegalPage({
       </main>
 
       <footer className="border-t border-border">
-        <div className="max-w-3xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
           <span>&copy; {new Date().getFullYear()} JETZT</span>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>

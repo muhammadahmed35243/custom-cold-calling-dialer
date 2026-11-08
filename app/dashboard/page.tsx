@@ -66,7 +66,7 @@ export default function DashboardSelector() {
             {/* Admin Dashboard Card */}
             <button
               onClick={() => router.push("/admin")}
-              className="group p-6 bg-card border border-border rounded-xl hover:border-foreground/20 hover:shadow-sm transition-all text-left"
+              className="group p-6 card hover:border-foreground/20 hover:shadow-sm transition-all text-left"
             >
               <h2 className="text-lg font-semibold text-foreground mb-1.5">Admin Dashboard</h2>
               <p className="text-sm text-muted-foreground mb-5">
@@ -96,7 +96,7 @@ export default function DashboardSelector() {
             {role === "super_admin" && (
               <button
                 onClick={() => router.push("/super-admin")}
-                className="group md:col-span-2 p-6 bg-card border border-border rounded-xl hover:border-foreground/20 hover:shadow-sm transition-all text-left"
+                className="group md:col-span-2 p-6 card hover:border-foreground/20 hover:shadow-sm transition-all text-left"
               >
                 <h2 className="text-lg font-semibold text-foreground mb-1.5">Super Admin</h2>
                 <p className="text-sm text-muted-foreground mb-5">

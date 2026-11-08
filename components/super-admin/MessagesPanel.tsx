@@ -159,7 +159,7 @@ export function MessagesPanel({ onNewCountChange }: { onNewCountChange?: (count:
       )}
 
       {shown.length === 0 ? (
-        <div className="bg-card border border-border rounded-xl p-6 text-sm text-muted-foreground">
+        <div className="card p-6 text-sm text-muted-foreground">
           {messages.length === 0 ? "No messages yet." : "Nothing here."}
         </div>
       ) : (
@@ -169,7 +169,7 @@ export function MessagesPanel({ onNewCountChange }: { onNewCountChange?: (count:
             const isOpen = expanded.has(m.id);
             const replySubject = `Re: ${m.subject || (m.source === "website" ? "your message to JETZT" : "your request")}`;
             return (
-              <article key={m.id} className="bg-card border border-border rounded-xl p-5 space-y-3">
+              <article key={m.id} className="card p-5 space-y-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -216,7 +216,7 @@ export function MessagesPanel({ onNewCountChange }: { onNewCountChange?: (count:
                       value={m.status}
                       disabled={busyId === m.id}
                       onChange={(e) => setStatus(m, e.target.value as Status)}
-                      className="px-2 py-1 border border-border rounded-md bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-ring/50"
+                      className="px-2 py-1 border border-input rounded-md bg-card text-foreground shadow-soft text-xs focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15"
                     >
                       <option value="new">New</option>
                       <option value="in_progress">In progress</option>

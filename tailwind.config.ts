@@ -44,6 +44,10 @@ const config: Config = {
         brand: {
           DEFAULT: "rgb(var(--brand) / <alpha-value>)",
           foreground: "rgb(var(--brand-foreground) / <alpha-value>)",
+          // Darker amber for brand-coloured text and icons on white: the
+          // bright brand colour alone is too faint to read as text.
+          strong: "rgb(var(--brand-strong) / <alpha-value>)",
+          soft: "rgb(var(--brand-soft) / <alpha-value>)",
         },
         destructive: {
           DEFAULT: "oklch(var(--destructive) / <alpha-value>)",
@@ -52,6 +56,14 @@ const config: Config = {
         border: "oklch(var(--border) / <alpha-value>)",
         input: "oklch(var(--input) / <alpha-value>)",
         ring: "oklch(var(--ring) / <alpha-value>)",
+      },
+      boxShadow: {
+        // Soft, layered shadows: cards sit just above the page, popovers
+        // and dialogs clearly above everything.
+        soft: "0 1px 2px 0 rgb(28 25 23 / 0.04), 0 1px 3px 0 rgb(28 25 23 / 0.06)",
+        "soft-hover": "0 2px 4px -1px rgb(28 25 23 / 0.06), 0 8px 20px -4px rgb(28 25 23 / 0.10)",
+        lift: "0 12px 32px -8px rgb(28 25 23 / 0.18), 0 4px 8px -4px rgb(28 25 23 / 0.08)",
+        glow: "0 1px 2px 0 rgb(180 95 0 / 0.25), 0 4px 12px -2px rgb(255 149 0 / 0.35)",
       },
       borderRadius: {
         sm: "calc(var(--radius) * 0.6)",

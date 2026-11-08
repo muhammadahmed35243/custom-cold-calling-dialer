@@ -69,7 +69,7 @@ export function KnowledgeBaseTab() {
         </div>
       )}
 
-      <div className="bg-card border border-border rounded-xl p-6">
+      <div className="card p-6">
         <h2 className="text-sm font-semibold text-foreground mb-4">Add Knowledge Base Entry</h2>
         <form onSubmit={handleAdd} className="space-y-3">
           <textarea
@@ -77,7 +77,7 @@ export function KnowledgeBaseTab() {
             onChange={(e) => setNewContent(e.target.value)}
             placeholder="A fact, FAQ answer, or policy the agent should be able to answer from..."
             rows={3}
-            className="w-full px-3.5 py-2.5 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+            className="field"
           />
           <button
             type="submit"
@@ -89,7 +89,7 @@ export function KnowledgeBaseTab() {
         </form>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="card overflow-hidden">
         <table className="w-full">
           <thead className="bg-muted border-b border-border">
             <tr>

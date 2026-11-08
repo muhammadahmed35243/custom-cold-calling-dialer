@@ -83,7 +83,7 @@ function Homepage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <JetztLogo className="h-7 w-auto" />
           <Link
             href="/auth/login"
@@ -95,8 +95,8 @@ function Homepage() {
       </header>
 
       <section className="dotted-bg">
-        <div className="max-w-6xl mx-auto px-6 pt-20 pb-24 flex flex-col items-center text-center">
-          <span className="text-xs font-medium text-brand bg-brand/10 px-3 py-1 rounded-full mb-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-24 flex flex-col items-center text-center">
+          <span className="text-xs font-medium text-brand-strong bg-brand/10 px-3 py-1 rounded-full mb-6">
             A calling workspace, not just a dialer
           </span>
           <h1 className="w-full text-4xl sm:text-5xl font-bold text-foreground max-w-3xl leading-tight">
@@ -136,7 +136,7 @@ function Homepage() {
               <div>
                 <div className="font-semibold text-foreground">Jordan Lee</div>
                 <div className="text-sm text-muted-foreground font-mono">+1 (415) 555-0148</div>
-                <div className="text-sm font-medium text-brand mt-1">Connected · 02:14</div>
+                <div className="text-sm font-medium text-brand-strong mt-1">Connected · 02:14</div>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -161,15 +161,15 @@ function Homepage() {
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-6 py-20">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20">
         <div className="text-center max-w-2xl mx-auto mb-14">
           <h2 className="text-2xl sm:text-3xl font-bold text-foreground">The calling fundamentals, built in</h2>
           <p className="text-muted-foreground mt-3">Everything else below is on top of these.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {FEATURES.map((f) => (
-            <div key={f.title} className="bg-card border border-border rounded-xl p-6">
-              <div className="h-10 w-10 rounded-lg bg-brand/10 text-brand flex items-center justify-center mb-4">
+            <div key={f.title} className="card p-6">
+              <div className="h-10 w-10 rounded-lg bg-brand-soft text-brand-strong flex items-center justify-center mb-4">
                 <f.icon className="w-5 h-5" />
               </div>
               <h3 className="font-semibold text-foreground mb-1.5">{f.title}</h3>
@@ -179,10 +179,10 @@ function Homepage() {
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-6 py-20">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
-            <span className="text-xs font-medium text-brand bg-brand/10 px-3 py-1 rounded-full">Inbound, covered</span>
+            <span className="text-xs font-medium text-brand-strong bg-brand/10 px-3 py-1 rounded-full">Inbound, covered</span>
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mt-4">
               An AI voice agent answers when your team can&apos;t
             </h2>
@@ -194,7 +194,7 @@ function Homepage() {
             <ul className="mt-6 space-y-3">
               {INBOUND_POINTS.map((point) => (
                 <li key={point} className="flex items-start gap-2.5 text-sm text-foreground">
-                  <CheckCircleIcon className="w-4 h-4 text-brand shrink-0 mt-0.5" />
+                  <CheckCircleIcon className="w-4 h-4 text-brand-strong shrink-0 mt-0.5" />
                   {point}
                 </li>
               ))}
@@ -205,7 +205,7 @@ function Homepage() {
           <div className="bg-card border border-border rounded-2xl shadow-sm p-6">
             <div className="flex items-center justify-between mb-5">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Incoming Call</span>
-              <span className="text-xs font-medium text-brand bg-brand/10 px-2 py-0.5 rounded-md">Answered by AI</span>
+              <span className="text-xs font-medium text-brand-strong bg-brand/10 px-2 py-0.5 rounded-md">Answered by AI</span>
             </div>
             <div className="flex items-center gap-4 mb-5">
               <Avatar name="Unknown Caller" size="md" />
@@ -215,15 +215,15 @@ function Homepage() {
               </div>
             </div>
             <div className="space-y-2.5 text-sm bg-secondary rounded-lg p-4">
-              <div><span className="font-medium text-brand">AI Voice Agent</span> <span className="text-foreground">Thanks for calling JETZT, how can I help today?</span></div>
+              <div><span className="font-medium text-brand-strong">AI Voice Agent</span> <span className="text-foreground">Thanks for calling JETZT, how can I help today?</span></div>
               <div><span className="font-medium text-foreground">Caller</span> <span className="text-foreground">I&apos;d like a quote for my sales team.</span></div>
-              <div><span className="font-medium text-brand">AI Voice Agent</span> <span className="text-foreground">Happy to help, let me grab a few details first.</span></div>
+              <div><span className="font-medium text-brand-strong">AI Voice Agent</span> <span className="text-foreground">Happy to help, let me grab a few details first.</span></div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-6 pb-20">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Illustrative, not a real call */}
           <div className="bg-card border border-border rounded-2xl shadow-sm p-6 space-y-5 order-2 lg:order-1">
@@ -231,7 +231,7 @@ function Homepage() {
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Transcript</span>
               <div className="mt-2.5 space-y-2 text-sm">
                 <div>
-                  <span className="font-medium text-brand">Agent</span>
+                  <span className="font-medium text-brand-strong">Agent</span>
                   <span className="text-xs text-muted-foreground font-mono ml-2">0:04</span>
                   <span className="text-foreground ml-2">Hi Jordan, following up on the demo we booked.</span>
                 </div>
@@ -252,7 +252,7 @@ function Homepage() {
           </div>
 
           <div className="order-1 lg:order-2">
-            <span className="text-xs font-medium text-brand bg-brand/10 px-3 py-1 rounded-full">After every call</span>
+            <span className="text-xs font-medium text-brand-strong bg-brand/10 px-3 py-1 rounded-full">After every call</span>
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mt-4">
               Notes, transcripts, and follow-ups, handled for you
             </h2>
@@ -264,7 +264,7 @@ function Homepage() {
             <ul className="mt-6 space-y-3">
               {ASSISTANT_POINTS.map((point) => (
                 <li key={point} className="flex items-start gap-2.5 text-sm text-foreground">
-                  <CheckCircleIcon className="w-4 h-4 text-brand shrink-0 mt-0.5" />
+                  <CheckCircleIcon className="w-4 h-4 text-brand-strong shrink-0 mt-0.5" />
                   {point}
                 </li>
               ))}
@@ -274,7 +274,7 @@ function Homepage() {
       </section>
 
       <section className="bg-secondary/40 border-y border-border">
-        <div className="max-w-5xl mx-auto px-6 py-20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground">How it works</h2>
           </div>
@@ -292,7 +292,7 @@ function Homepage() {
         </div>
       </section>
 
-      <section id="contact" className="max-w-6xl mx-auto px-6 py-24 scroll-mt-16">
+      <section id="contact" className="max-w-6xl mx-auto px-4 sm:px-6 py-24 scroll-mt-16">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 items-start">
           <div className="lg:col-span-2 text-center lg:text-left">
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Ready to call smarter?</h2>
@@ -322,7 +322,7 @@ function Homepage() {
       </section>
 
       <footer className="border-t border-border">
-        <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <JetztLogo className="h-6 w-auto" />
             <span className="text-sm text-muted-foreground">Now, not next quarter</span>

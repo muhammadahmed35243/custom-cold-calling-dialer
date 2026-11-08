@@ -914,7 +914,7 @@ export default function DialerPage() {
       {/* Remote audio for browser (WebRTC) calls -- never rendered visibly */}
       <audio ref={remoteAudioRef} autoPlay className="hidden" />
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <BudgetBanner />
         <div className="mb-8">
           <StatRow
@@ -928,7 +928,7 @@ export default function DialerPage() {
         </div>
 
         {/* Upload Options */}
-        <div className="bg-card border border-border rounded-xl p-6 mb-8">
+        <div className="card p-6 mb-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-sm font-semibold text-foreground">Add Leads</h2>
             <button
@@ -946,35 +946,35 @@ export default function DialerPage() {
                 placeholder="Name *"
                 value={addLeadForm.name}
                 onChange={(e) => setAddLeadForm({ ...addLeadForm, name: e.target.value })}
-                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                className="field"
               />
               <input
                 type="tel"
                 placeholder="Phone Number * (e.g., +923001234567)"
                 value={addLeadForm.phone}
                 onChange={(e) => setAddLeadForm({ ...addLeadForm, phone: e.target.value })}
-                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                className="field"
               />
               <input
                 type="email"
                 placeholder="Email (optional)"
                 value={addLeadForm.email}
                 onChange={(e) => setAddLeadForm({ ...addLeadForm, email: e.target.value })}
-                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                className="field"
               />
               <input
                 type="text"
                 placeholder="Company (optional)"
                 value={addLeadForm.company}
                 onChange={(e) => setAddLeadForm({ ...addLeadForm, company: e.target.value })}
-                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                className="field"
               />
               <textarea
                 placeholder="Notes (optional)"
                 value={addLeadForm.notes}
                 onChange={(e) => setAddLeadForm({ ...addLeadForm, notes: e.target.value })}
                 rows={2}
-                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                className="field"
               />
               <div className="flex gap-2">
                 <button
@@ -1052,7 +1052,7 @@ export default function DialerPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Queue */}
           <div className="lg:col-span-1">
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="card overflow-hidden">
               <div className="bg-muted px-6 py-3.5 border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground">Pending Leads ({leads.length})</h3>
               </div>
@@ -1084,7 +1084,7 @@ export default function DialerPage() {
                           <div className="text-sm font-medium text-foreground truncate">{lead.name}</div>
                           <div className="text-xs text-muted-foreground font-mono">{lead.phone}</div>
                           {lead.last_called_at && (
-                            <div className="text-[11px] text-brand">
+                            <div className="text-[11px] text-brand-strong">
                               Retry &middot; last tried {new Date(lead.last_called_at).toLocaleDateString()}
                             </div>
                           )}
@@ -1161,7 +1161,7 @@ export default function DialerPage() {
                       value={phoneDraft}
                       onChange={(e) => setPhoneDraft(e.target.value)}
                       placeholder="+923001234567"
-                      className="px-2 py-1 border border-border rounded-md bg-background text-foreground font-mono w-40 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                      className="px-2 py-1 border border-input rounded-md bg-card text-foreground shadow-soft font-mono w-40 focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15"
                     />
                     <button
                       onClick={savePhone}
@@ -1179,7 +1179,7 @@ export default function DialerPage() {
                   <button
                     onClick={startEditPhone}
                     disabled={!!activeCall}
-                    className="font-mono text-foreground hover:text-brand transition-colors disabled:opacity-50"
+                    className="font-mono text-foreground hover:text-brand-strong transition-colors disabled:opacity-50"
                   >
                     {myPhoneNumber || "Set your number"}
                   </button>
@@ -1188,11 +1188,11 @@ export default function DialerPage() {
             )}
 
             {activeCall ? (
-              <div className="bg-card border border-border rounded-xl p-6 text-center text-sm text-muted-foreground">
+              <div className="card p-6 text-center text-sm text-muted-foreground">
                 Call in progress
               </div>
             ) : currentLead ? (
-              <div className="bg-card border border-border rounded-xl p-6">
+              <div className="card p-6">
                 <h3 className="text-sm font-semibold text-foreground mb-4">Current Lead</h3>
                 <div className="flex items-center gap-4 mb-6">
                   <Avatar name={currentLead.name} size="lg" />
@@ -1216,14 +1216,14 @@ export default function DialerPage() {
                 </button>
               </div>
             ) : (
-              <div className="bg-card border border-border rounded-xl p-6 text-center text-sm text-muted-foreground">
+              <div className="card p-6 text-center text-sm text-muted-foreground">
                 Upload leads to get started
               </div>
             )}
 
             {/* Callbacks */}
             {callbackEntries.length > 0 && (
-              <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="card overflow-hidden">
                 <div className="bg-muted px-6 py-3.5 border-b border-border">
                   <h3 className="text-sm font-semibold text-foreground">Callbacks ({callbackEntries.length})</h3>
                 </div>
@@ -1256,7 +1256,7 @@ export default function DialerPage() {
             )}
 
             {/* Call History */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="card overflow-hidden">
               <div className="bg-muted px-6 py-3.5 border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground">Call History</h3>
               </div>
@@ -1302,7 +1302,7 @@ export default function DialerPage() {
                                 <select
                                   value={editDraft.disposition}
                                   onChange={(e) => setEditDraft({ ...editDraft, disposition: e.target.value })}
-                                  className="px-2.5 py-1.5 border border-border rounded-md bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                                  className="px-2.5 py-1.5 border border-input rounded-md bg-card text-foreground shadow-soft text-xs focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15"
                                 >
                                   <option value="">Select outcome...</option>
                                   <option value="connected">Connected</option>
@@ -1331,7 +1331,7 @@ export default function DialerPage() {
                                       type="datetime-local"
                                       value={editDraft.callbackAt}
                                       onChange={(e) => setEditDraft({ ...editDraft, callbackAt: e.target.value })}
-                                      className="text-xs px-2 py-1 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                                      className="text-xs px-2 py-1 border border-input rounded-md bg-card text-foreground shadow-soft focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15"
                                     />
                                   )}
                                 </div>
@@ -1348,7 +1348,7 @@ export default function DialerPage() {
                                   value={editDraft.notes}
                                   onChange={(e) => setEditDraft({ ...editDraft, notes: e.target.value })}
                                   placeholder="Add notes..."
-                                  className="w-full text-xs px-2.5 py-1.5 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                                  className="w-full text-xs px-2.5 py-1.5 border border-input rounded-md bg-card text-foreground shadow-soft placeholder-muted-foreground focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15"
                                 />
                               ) : (
                                 <span className="text-xs text-muted-foreground line-clamp-2" title={call.notes || ""}>
@@ -1439,7 +1439,7 @@ export default function DialerPage() {
                                   <div className="space-y-2 max-h-80 overflow-y-auto">
                                     {call.transcript.map((u: { speaker: string; startSeconds: number; text: string }, i: number) => (
                                       <div key={i} className="text-sm">
-                                        <span className={`font-medium ${u.speaker === "Agent" ? "text-brand" : "text-foreground"}`}>
+                                        <span className={`font-medium ${u.speaker === "Agent" ? "text-brand-strong" : "text-foreground"}`}>
                                           {u.speaker}
                                         </span>
                                         <span className="text-xs text-muted-foreground font-mono ml-2">
@@ -1489,7 +1489,7 @@ export default function DialerPage() {
 
       {emailModalCall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4">
-          <div className="bg-card border border-border rounded-xl shadow-sm p-6 w-full max-w-lg">
+          <div className="card shadow-sm p-6 w-full max-w-lg">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-foreground">
                 Follow-up to {emailModalCall.leads?.name || "lead"} ({emailModalCall.leads?.email})
@@ -1508,14 +1508,14 @@ export default function DialerPage() {
                 value={emailDraft.subject}
                 onChange={(e) => setEmailDraft({ ...emailDraft, subject: e.target.value })}
                 placeholder="Subject"
-                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                className="field"
               />
               <textarea
                 value={emailDraft.body}
                 onChange={(e) => setEmailDraft({ ...emailDraft, body: e.target.value })}
                 placeholder="Message"
                 rows={9}
-                className="w-full px-3.5 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+                className="field"
               />
 
               <div className="flex items-center justify-between gap-3">

@@ -2,27 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * JETZT theme: warm white surfaces, near-black type and the JETZT
+ * yellow-orange as the one accent. Every colour in the app comes from these
+ * tokens (see tailwind.config.ts), so changing one here changes it everywhere.
+ */
 :root {
-  --background: 0.982 0.003 85;
-  --foreground: 0.16 0.004 60;
-  --card: 0.99 0.003 85;
-  --card-foreground: 0.16 0.004 60;
-  --secondary: 0.955 0.003 85;
-  --secondary-foreground: 0.205 0 0;
-  --muted: 0.955 0.003 85;
-  --muted-foreground: 0.53 0.006 60;
-  --accent: 0.955 0.003 85;
-  --accent-foreground: 0.205 0 0;
+  /* Page and surfaces: a barely-warm white page with pure white cards. */
+  --background: 0.985 0.004 85;
+  --foreground: 0.18 0.006 60;
+  --card: 1 0 0;
+  --card-foreground: 0.18 0.006 60;
+  --secondary: 0.962 0.005 85;
+  --secondary-foreground: 0.22 0.006 60;
+  --muted: 0.962 0.005 85;
+  /* Secondary text: dark enough to pass 4.5:1 contrast on white and on the page. */
+  --muted-foreground: 0.5 0.012 60;
+  --accent: 0.962 0.005 85;
+  --accent-foreground: 0.22 0.006 60;
   --accent-green: 0.72 0.17 150;
-  --accent-green-foreground: 0.16 0.05 150;
+  --accent-green-foreground: 0.4 0.11 150;
+
+  /* Brand: JETZT yellow-orange. Text on it is near-black (white on this
+     yellow is unreadable); --brand-strong is the readable amber for text and
+     icons on white; --brand-soft is a pale tint for highlights. */
   --brand: 255 149 0;
-  --brand-foreground: 255 255 255;
-  --destructive: 0.577 0.245 27.325;
+  --brand-foreground: 28 25 23;
+  --brand-strong: 176 92 0;
+  --brand-soft: 255 244 224;
+
+  --destructive: 0.577 0.215 27.325;
   --destructive-foreground: 0.985 0 0;
-  --border: 0.9 0.004 75;
-  --input: 0.9 0.004 75;
-  --ring: 0.708 0 0;
-  --radius: 0.625rem;
+  --border: 0.915 0.006 80;
+  --input: 0.88 0.008 80;
+  --ring: 0.78 0.16 68;
+  --radius: 0.75rem;
 }
 
 * {
@@ -34,10 +48,130 @@ body {
   height: 100%;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-feature-settings: "ss01", "cv11";
+}
+
+::selection {
+  background: rgb(var(--brand) / 0.25);
+}
+
+/* One visible, on-brand focus ring for keyboard users everywhere. */
+:focus-visible {
+  outline: 2px solid oklch(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Numbers in tables and stats line up. */
+.tabular-nums,
+td,
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
 .dotted-bg {
   background-image: radial-gradient(
     color-mix(in oklch, oklch(var(--foreground)) 14%, transparent) 1px,
     transparent 1px
   );
   background-size: 20px 20px;
+}
+
+/* Thin, quiet scrollbars for the horizontally scrolling tab bars. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Shared building blocks. Pages use these instead of repeating long class
+ * lists, so buttons, cards and fields look and behave the same everywhere.
+ */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg text-sm font-medium whitespace-nowrap select-none
+      transition-[background-color,border-color,color,box-shadow,transform] duration-150
+      active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-sm {
+    @apply h-8 px-3 text-xs rounded-md;
+  }
+  .btn-lg {
+    @apply h-12 px-6 text-base rounded-xl;
+  }
+  .btn-primary {
+    @apply bg-primary text-primary-foreground shadow-glow hover:bg-[#F28C00];
+  }
+  .btn-secondary {
+    @apply bg-card text-foreground border border-input shadow-soft hover:bg-secondary hover:border-foreground/20;
+  }
+  .btn-ghost {
+    @apply text-muted-foreground hover:text-foreground hover:bg-secondary;
+  }
+  .btn-danger {
+    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
+  }
+  .btn-danger-ghost {
+    @apply text-destructive hover:bg-destructive/10;
+  }
+
+  .card {
+    @apply bg-card text-card-foreground border border-border rounded-xl shadow-soft;
+  }
+  .card-hover {
+    @apply transition-shadow duration-200 hover:shadow-soft-hover;
+  }
+
+  .field {
+    @apply w-full h-10 px-3 rounded-lg border border-input bg-card text-foreground text-sm shadow-[inset_0_1px_1px_rgb(28_25_23/0.03)]
+      placeholder:text-muted-foreground/70
+      transition-[border-color,box-shadow] duration-150
+      hover:border-foreground/25
+      focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15
+      disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+  textarea.field {
+    @apply h-auto py-2;
+  }
+  .field-label {
+    @apply block text-xs font-medium text-muted-foreground mb-1.5;
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap;
+  }
+
+  /* Tab bars: scroll sideways on phones instead of wrapping into a mess. */
+  .tabbar {
+    @apply flex gap-1 overflow-x-auto scrollbar-none border-b border-border -mx-4 px-4 sm:mx-0 sm:px-0;
+  }
+  .tab {
+    @apply relative shrink-0 px-3 py-2.5 text-sm font-medium text-muted-foreground whitespace-nowrap transition-colors hover:text-foreground
+      after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:rounded-full after:bg-transparent;
+  }
+  .tab-active {
+    @apply text-foreground after:bg-brand;
+  }
 }

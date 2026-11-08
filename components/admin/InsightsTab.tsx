@@ -5,7 +5,7 @@ import { authedFetch } from "@/lib/voice-agent/authedFetch";
 import type { Insight } from "@/lib/voice-agent/types";
 
 const STATUS_STYLE: Record<Insight["status"], string> = {
-  pending: "bg-brand/15 text-brand",
+  pending: "bg-brand-soft text-brand-strong",
   approved: "bg-accent-green/15 text-accent-green-foreground",
   rejected: "bg-destructive/10 text-destructive",
   auto_applied: "bg-muted text-muted-foreground",
@@ -58,7 +58,7 @@ export function InsightsTab() {
         </div>
       )}
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="card overflow-hidden">
         <table className="w-full">
           <thead className="bg-muted border-b border-border">
             <tr>
