@@ -8,6 +8,7 @@ import { useAppReady } from "@/components/AppReadyContext";
 import { BrandedLoader } from "@/components/BrandedLoader";
 import { authedFetch } from "@/lib/voice-agent/authedFetch";
 import { MessagesPanel } from "@/components/super-admin/MessagesPanel";
+import { GrantsDialog, countryLabel } from "@/components/super-admin/GrantsDialog";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,11 @@ type Org = {
   admins: OrgAdmin[];
   agentCount: number;
   numberCount: number;
-  // This month: what the organization pays, and what it cost JETZT at Telnyx.
-  monthSpend: { price: number; cost: number } | null;
+  // This month: what the organization pays (after free credit), what it cost
+  // JETZT at Telnyx, the credit applied and the charges before credit.
+  monthSpend: { price: number; cost: number; credit?: number; charges?: number } | null;
+  // Free credit and bonus minutes still available.
+  gifts?: { creditLeft: number; minutesLeft: { countryCode: string | null; minutes: number }[] } | null;
 };
 
 // Numbers are kept as strings while editing; empty means "no limit".
@@ -138,6 +142,7 @@ export default function SuperAdminPage() {
   const [confirmingSuspend, setConfirmingSuspend] = useState<string | null>(null);
   const [busyOrgId, setBusyOrgId] = useState<string | null>(null);
   const [view, setView] = useState<"orgs" | "messages">("orgs");
+  const [grantsFor, setGrantsFor] = useState<Org | null>(null);
   const [newMessages, setNewMessages] = useState(0);
 
   const loadOrgs = useCallback(async () => {
@@ -299,6 +304,11 @@ export default function SuperAdminPage() {
                     <>
                       ${org.monthSpend.price.toFixed(2)}
                       {org.monthly_budget_usd !== null && ` of $${Number(org.monthly_budget_usd).toFixed(2)}`}
+                      {!!org.monthSpend.credit && (
+                        <span className="block text-xs text-muted-foreground">
+                          after ${org.monthSpend.credit.toFixed(2)} free credit
+                        </span>
+                      )}
                       <span className="block text-xs text-muted-foreground">
                         Telnyx cost ${org.monthSpend.cost.toFixed(2)} &middot; margin $
                         {(org.monthSpend.price - org.monthSpend.cost).toFixed(2)}
@@ -309,6 +319,18 @@ export default function SuperAdminPage() {
                 <dt className="text-muted-foreground">Monthly budget</dt>
                 <dd className="text-foreground">
                   {org.monthly_budget_usd === null ? "No limit" : `$${Number(org.monthly_budget_usd).toFixed(2)}`}
+                </dd>
+                <dt className="text-muted-foreground">Free credit &amp; minutes</dt>
+                <dd className="text-foreground">
+                  {(() => {
+                    const parts = [
+                      org.gifts?.creditLeft ? `$${org.gifts.creditLeft.toFixed(2)} credit` : null,
+                      ...(org.gifts?.minutesLeft || [])
+                        .filter((m) => m.minutes > 0)
+                        .map((m) => `${m.minutes} min to ${countryLabel(m.countryCode)}`),
+                    ].filter(Boolean);
+                    return parts.length ? parts.join(" · ") : "None";
+                  })()}
                 </dd>
                 <dt className="text-muted-foreground">Markup</dt>
                 <dd className="text-foreground">
@@ -346,6 +368,12 @@ export default function SuperAdminPage() {
                   className="text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground py-1.5 px-3 rounded-md transition-colors"
                 >
                   Edit settings
+                </button>
+                <button
+                  onClick={() => setGrantsFor(org)}
+                  className="text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground py-1.5 px-3 rounded-md transition-colors"
+                >
+                  Credit &amp; minutes
                 </button>
                 {!org.isFounding &&
                   (org.status === "suspended" ? (
@@ -385,6 +413,14 @@ export default function SuperAdminPage() {
         </>
         )}
       </main>
+
+      {grantsFor && (
+        <GrantsDialog
+          org={{ id: grantsFor.id, name: grantsFor.name }}
+          onClose={() => setGrantsFor(null)}
+          onChanged={loadOrgs}
+        />
+      )}
 
       {editing && (
         <OrgFormDialog

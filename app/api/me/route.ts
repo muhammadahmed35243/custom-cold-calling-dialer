@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getActor, canBuyNumbers, ADMIN_ROLES } from "@/lib/authz";
-import { monthSpend } from "@/lib/billing";
+import { monthNet } from "@/lib/billing";
 
 // Who the caller is and what their organization has switched on, so pages can
 // route by role and hide what the organization doesn't have. Limits and
@@ -17,7 +17,8 @@ export async function GET(req: NextRequest) {
   if (org.monthly_budget_usd != null) {
     try {
       const limitUsd = Number(org.monthly_budget_usd);
-      const spentUsd = (await monthSpend(org.id)).totalPrice;
+      // What they actually pay, after any free credit.
+      const spentUsd = (await monthNet(org.id)).net;
       const usedPct = limitUsd > 0 ? Math.round((spentUsd / limitUsd) * 100) : 100;
       budget = ADMIN_ROLES.includes(actor.role) ? { usedPct, limitUsd, spentUsd } : { usedPct };
     } catch (err) {

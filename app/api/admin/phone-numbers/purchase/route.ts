@@ -11,7 +11,7 @@ import {
 } from "@/lib/authz";
 import { logAudit } from "@/lib/audit";
 import { findAvailableNumber, purchaseNumber } from "@/lib/telnyx";
-import { money, monthSpend, numberPrice } from "@/lib/billing";
+import { money, monthNet, numberPrice } from "@/lib/billing";
 
 export async function POST(req: NextRequest) {
   const { actor, error: authError } = await requireRole(req, ADMIN_ROLES);
@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
   if (org.monthly_budget_usd != null) {
     const budget = Number(org.monthly_budget_usd);
     const addition = (monthlyPrice ?? 0) + (upfrontPrice ?? 0);
-    const spend = await monthSpend(org.id);
-    if (spend.totalPrice + addition > budget) {
+    const { net } = await monthNet(org.id);
+    if (net + addition > budget) {
       return NextResponse.json(
         {
           error: `This number adds ${money(addition)} this month, which would take ${org.name} past its ${money(budget)} monthly budget.`,

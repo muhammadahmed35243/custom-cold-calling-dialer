@@ -3,7 +3,7 @@ import { supabaseServiceClient } from "@/lib/supabase";
 import { requireRole, FOUNDING_ORG_ID } from "@/lib/authz";
 import { logAudit } from "@/lib/audit";
 import { parseOrgSettings, VOICE_ONLY_FOUNDING_MESSAGE } from "@/lib/org-settings";
-import { monthSpend } from "@/lib/billing";
+import { describeGrants, monthNet } from "@/lib/billing";
 
 type Member = { org_id: string; email: string; display_name: string; role: string; is_active: boolean };
 
@@ -28,10 +28,26 @@ export async function GET(req: NextRequest) {
   // A failure here leaves the card without figures rather than failing the page.
   const spends = await Promise.all(
     (orgsResult.data || []).map((org) =>
-      monthSpend(org.id).catch((err) => {
+      monthNet(org.id).catch((err) => {
         console.error("super-admin: couldn't read spend", { orgId: org.id, err });
         return null;
       })
+    )
+  );
+  // Free credit and bonus minutes still available to each organization.
+  const gifts = await Promise.all(
+    (orgsResult.data || []).map((org) =>
+      describeGrants(org.id)
+        .then((grants) => {
+          const active = grants.filter((g) => g.status === "active");
+          return {
+            creditLeft: active.filter((g) => g.kind === "credit").reduce((sum, g) => sum + g.left, 0),
+            minutesLeft: active
+              .filter((g) => g.kind === "minutes")
+              .map((g) => ({ countryCode: g.countryCode, minutes: g.left })),
+          };
+        })
+        .catch(() => null)
     )
   );
 
@@ -46,7 +62,11 @@ export async function GET(req: NextRequest) {
         .map((m) => ({ email: m.email, display_name: m.display_name, role: m.role, is_active: m.is_active })),
       agentCount: orgMembers.filter((m) => m.role === "agent").length,
       numberCount: numbers.filter((n) => n.org_id === org.id).length,
-      monthSpend: spend ? { price: spend.totalPrice, cost: spend.totalCost } : null,
+      // price: what they pay after free credit; cost: what it cost JETZT.
+      monthSpend: spend
+        ? { price: spend.net, cost: spend.spend.totalCost, credit: spend.creditApplied, charges: spend.spend.totalPrice }
+        : null,
+      gifts: gifts[i],
     };
   });
 

@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { authedFetch } from "@/lib/voice-agent/authedFetch";
+import {
+  GrantStatusBadge,
+  countryLabel,
+  grantAmount,
+  grantDates,
+  type GrantSummary,
+} from "@/components/super-admin/GrantsDialog";
 
 type UsageCall = {
   id: string;
@@ -13,6 +20,8 @@ type UsageCall = {
   talkSeconds: number;
   agentLegSeconds: number | null;
   priceUsd: number | null;
+  // Minutes of this call covered by bonus minutes from JETZT.
+  bonusMinutes: number;
   costUsd?: number | null;
   note?: string | null;
 };
@@ -35,6 +44,9 @@ type Usage = {
     numbersPrice: number;
     voicePrice: number;
     totalPrice: number;
+    // Free credit applied to this month's charges, and what's left to pay.
+    creditApplied: number;
+    netPrice: number;
     callsCost?: number;
     numbersCost?: number;
     totalCost?: number;
@@ -42,6 +54,7 @@ type Usage = {
   stats: { calls: number; connected: number; talkSeconds: number; numbers: number; voiceMinutes: number; truncated: boolean };
   calls: UsageCall[];
   numbers: UsageNumber[];
+  grants: GrantSummary[];
 };
 
 const SHOWN_CALLS = 200;
@@ -119,9 +132,14 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
 
   const downloadCsv = () => {
     if (!usage) return;
-    const header = ["Type", "Date", "Agent", "Lead", "Number", "Call type", "Talk time (s)", "Amount (USD)"];
+    const header = ["Type", "Date", "Agent", "Lead", "Number", "Call type", "Talk time (s)", "Free minutes", "Amount (USD)"];
     if (showCost) header.push("Telnyx cost (USD)");
     const rows: unknown[][] = [header];
+    const line = (label: string, amount: number, cost?: number) => {
+      const row: unknown[] = [label, "", "", "", "", "", "", "", amount];
+      if (showCost) row.push(cost ?? "");
+      rows.push(row);
+    };
 
     for (const c of usage.calls) {
       const row: unknown[] = [
@@ -132,22 +150,24 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
         c.leadPhone,
         c.mode === "browser" ? "Browser" : c.mode === "phone" ? "Phone" : "",
         c.talkSeconds,
+        c.bonusMinutes || "",
         c.priceUsd ?? "",
       ];
       if (showCost) row.push(c.costUsd ?? "");
       rows.push(row);
     }
     for (const n of usage.numbers) {
-      const row: unknown[] = ["Phone number", n.purchasedAt, "", "", n.phoneNumber, "", "", n.monthlyPrice + n.upfrontPrice];
+      const row: unknown[] = ["Phone number", n.purchasedAt, "", "", n.phoneNumber, "", "", "", n.monthlyPrice + n.upfrontPrice];
       if (showCost) row.push((n.monthlyCost ?? 0) + (n.upfrontCost ?? 0));
       rows.push(row);
     }
     if (usage.stats.voiceMinutes > 0) {
-      rows.push(["Voice assistant", usage.month, "", "", "", "", usage.stats.voiceMinutes * 60, usage.spend.voicePrice]);
+      const row: unknown[] = ["Voice assistant", usage.month, "", "", "", "", usage.stats.voiceMinutes * 60, "", usage.spend.voicePrice];
+      rows.push(row);
     }
-    const total: unknown[] = ["Total", "", "", "", "", "", "", usage.spend.totalPrice];
-    if (showCost) total.push(usage.spend.totalCost);
-    rows.push(total);
+    line("Total charges", usage.spend.totalPrice, usage.spend.totalCost);
+    if (usage.spend.creditApplied > 0) line("Free credit applied", -usage.spend.creditApplied);
+    line("Amount due", usage.spend.netPrice);
 
     const csv = rows.map((r) => r.map(csvCell).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -162,7 +182,11 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
   };
 
   const budget = usage?.org.budgetUsd ?? null;
-  const usedPct = usage && budget ? Math.min(100, Math.round((usage.spend.totalPrice / budget) * 100)) : 0;
+  // The budget limits what they pay, so it's measured after free credit.
+  const usedPct = usage && budget ? Math.min(100, Math.round((usage.spend.netPrice / budget) * 100)) : 0;
+  const activeGrants = usage?.grants.filter((g) => g.status === "active") || [];
+  const creditLeft = activeGrants.filter((g) => g.kind === "credit").reduce((sum, g) => sum + g.left, 0);
+  const minuteGrants = activeGrants.filter((g) => g.kind === "minutes" && g.left > 0);
   const recentCalls = usage ? [...usage.calls].reverse().slice(0, SHOWN_CALLS) : [];
   const hasUnpriced = !!usage?.calls.some((c) => c.priceUsd === null);
 
@@ -203,8 +227,13 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card
                 label="Spent"
-                value={money(usage.spend.totalPrice)}
-                sub={budget !== null ? `of ${money(budget)} monthly budget` : "No budget limit"}
+                value={money(usage.spend.netPrice)}
+                sub={
+                  (budget !== null ? `of ${money(budget)} monthly budget` : "No budget limit") +
+                  (usage.spend.creditApplied > 0
+                    ? ` · after ${money(usage.spend.creditApplied)} free credit on ${money(usage.spend.totalPrice)}`
+                    : "")
+                }
               >
                 {budget !== null && (
                   <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden" aria-hidden="true">
@@ -231,6 +260,14 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
                   label="Voice assistant"
                   value={`${usage.stats.voiceMinutes} min`}
                   sub={money(usage.spend.voicePrice)}
+                />
+              )}
+              {creditLeft > 0 && <Card label="Free credit left" value={money(creditLeft)} sub="Pays your charges first" />}
+              {minuteGrants.length > 0 && (
+                <Card
+                  label="Bonus minutes left"
+                  value={String(minuteGrants.reduce((sum, g) => sum + g.left, 0))}
+                  sub={minuteGrants.map((g) => `${g.left} for ${countryLabel(g.countryCode)}`).join(" · ")}
                 />
               )}
               {showCost && (
@@ -283,7 +320,14 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
                             {c.mode === "browser" ? "Browser" : c.mode === "phone" ? "Phone" : "-"}
                           </td>
                           <td className="px-6 py-3 text-sm text-foreground text-right tabular-nums">{talkTime(c.talkSeconds)}</td>
-                          <td className="px-6 py-3 text-sm text-foreground text-right tabular-nums">{precise(c.priceUsd)}</td>
+                          <td className="px-6 py-3 text-sm text-foreground text-right tabular-nums">
+                            {precise(c.priceUsd)}
+                            {c.bonusMinutes > 0 && (
+                              <div className="text-[11px] text-accent-green-foreground whitespace-nowrap">
+                                {c.bonusMinutes} free min
+                              </div>
+                            )}
+                          </td>
                           {showCost && (
                             <td className="px-6 py-3 text-sm text-muted-foreground text-right tabular-nums" title={c.note || undefined}>
                               {precise(c.costUsd)}
@@ -347,6 +391,34 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            )}
+
+            {usage.grants.length > 0 && (
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-border">
+                  <h2 className="text-sm font-semibold text-foreground">Free credit &amp; bonus minutes from JETZT</h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Credit pays your charges first, carrying over month to month until used. Bonus minutes make calls
+                    to leads in that country free. Neither counts against your budget.
+                  </p>
+                </div>
+                <ul className="divide-y divide-border">
+                  {usage.grants.map((g) => (
+                    <li key={g.id} className="px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm text-foreground tabular-nums">
+                          {g.kind === "credit" ? "Free credit" : "Bonus minutes"} &middot; {grantAmount(g)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {grantDates(g)}
+                          {g.note && ` · ${g.note}`}
+                        </div>
+                      </div>
+                      <GrantStatusBadge status={g.status} />
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </>

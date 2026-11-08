@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServiceClient } from "@/lib/supabase";
 import { requireRole, targetOrgId, loadOrganization, canSeeCosts, ADMIN_ROLES } from "@/lib/authz";
-import { monthSpend, parseMonth, withMarkup } from "@/lib/billing";
+import { describeGrants, monthNet, parseMonth, withMarkup } from "@/lib/billing";
 
 const PAGE = 1000;
 const MAX_CALLS = 20000;
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   const showCost = canSeeCosts(actor);
 
   try {
-    const spend = await monthSpend(org.id, month);
+    const [{ spend, creditApplied, net }, grants] = await Promise.all([monthNet(org.id, month), describeGrants(org.id)]);
 
     // Calls, in pages (the API returns at most 1000 rows at a time).
     const calls: any[] = [];
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       const { data, error } = await supabaseServiceClient
         .from("calls")
         .select(
-          "id, created_at, agent_email, mode, duration_seconds, lead_leg_seconds, agent_leg_seconds, cost_usd, price_usd, billing_note, leads(name, phone)"
+          "id, created_at, agent_email, mode, duration_seconds, lead_leg_seconds, agent_leg_seconds, cost_usd, price_usd, bonus_minutes, billing_note, leads(name, phone)"
         )
         .eq("org_id", org.id)
         .gte("created_at", start)
@@ -82,14 +82,26 @@ export async function GET(req: NextRequest) {
         voicePricePerMin: Number(org.voice_assistant_price_per_min) || 0,
         ...(showCost ? { callMarkupPct: Number(org.call_markup_pct), numberMarkupPct: Number(org.number_markup_pct) } : {}),
       },
-      spend: showCost
-        ? spend
-        : {
-            callsPrice: spend.callsPrice,
-            numbersPrice: spend.numbersPrice,
-            voicePrice: spend.voicePrice,
-            totalPrice: spend.totalPrice,
-          },
+      spend: {
+        ...(showCost
+          ? spend
+          : {
+              callsPrice: spend.callsPrice,
+              numbersPrice: spend.numbersPrice,
+              voicePrice: spend.voicePrice,
+              totalPrice: spend.totalPrice,
+            }),
+        // Free credit applied to this month's charges, and what's left to pay.
+        creditApplied,
+        netPrice: net,
+      },
+      // Free credit and bonus minutes JETZT has given, with what's left today.
+      grants: grants.map((g) => {
+        if (showCost) return g;
+        const visible: Record<string, unknown> = { ...g };
+        delete visible.createdBy;
+        return visible;
+      }),
       stats: {
         calls: calls.length,
         connected: calls.filter((c) => talkSeconds(c) > 0).length,
@@ -110,6 +122,7 @@ export async function GET(req: NextRequest) {
           talkSeconds: talkSeconds(c),
           agentLegSeconds: c.agent_leg_seconds,
           priceUsd: c.price_usd != null ? Number(c.price_usd) : null,
+          bonusMinutes: c.bonus_minutes || 0,
           ...(showCost ? { costUsd: c.cost_usd != null ? Number(c.cost_usd) : null, note: c.billing_note } : {}),
         };
       }),
