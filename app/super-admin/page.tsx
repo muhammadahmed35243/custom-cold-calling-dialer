@@ -217,6 +217,11 @@ export default function SuperAdminPage() {
       <AppHeader userEmail={user?.email} role="super_admin" onSignOut={handleSignOut} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        <div>
+          <div className="eyebrow">Super admin</div>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Control center</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Every organization, its limits and spend, and messages from sub admins.</p>
+        </div>
         <div className="tabbar">
           {(
             [
@@ -252,7 +257,7 @@ export default function SuperAdminPage() {
           </div>
           <button
             onClick={() => setEditing("new")}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-all active:translate-y-px"
+            className="btn btn-primary"
           >
             New organization
           </button>
@@ -357,19 +362,19 @@ export default function SuperAdminPage() {
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <button
                   onClick={() => router.push(org.isFounding ? "/admin" : `/admin?orgId=${org.id}`)}
-                  className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground py-1.5 px-3 rounded-md transition-colors"
+                  className="btn btn-primary btn-sm"
                 >
                   Open admin
                 </button>
                 <button
                   onClick={() => setEditing(org)}
-                  className="text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground py-1.5 px-3 rounded-md transition-colors"
+                  className="btn btn-secondary btn-sm"
                 >
                   Edit settings
                 </button>
                 <button
                   onClick={() => setGrantsFor(org)}
-                  className="text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground py-1.5 px-3 rounded-md transition-colors"
+                  className="btn btn-secondary btn-sm"
                 >
                   Credit &amp; minutes
                 </button>
@@ -544,7 +549,7 @@ function OrgFormDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
       {/* The title and buttons stay put; only the settings in between scroll,
           so Save is always reachable however short the window is. */}
       <form
@@ -677,7 +682,7 @@ function OrgFormDialog({
           <button
             type="submit"
             disabled={saving}
-            className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2.5 px-4 rounded-lg text-sm transition-all active:translate-y-px"
+            className="btn btn-primary flex-1"
           >
             {saving ? "Saving..." : isNew ? "Create organization" : "Save changes"}
           </button>
@@ -685,7 +690,7 @@ function OrgFormDialog({
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2.5 px-4 rounded-lg text-sm transition-colors"
+            className="btn btn-secondary flex-1"
           >
             Cancel
           </button>

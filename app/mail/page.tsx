@@ -212,6 +212,10 @@ export default function MailPage() {
       <AppHeader userEmail={user?.email} role={agentInfo?.role} onSignOut={handleSignOut} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Mail</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Read and send email from your connected mailbox.</p>
+        </div>
         <MailboxNotice />
         {mailboxProblem ? (
           <div className="space-y-6 max-w-3xl">
@@ -224,7 +228,7 @@ export default function MailPage() {
             <div className="lg:col-span-1 space-y-4">
               <button
                 onClick={() => openCompose()}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2.5 px-4 rounded-lg transition-all active:translate-y-px"
+                className="btn btn-primary w-full"
               >
                 Compose
               </button>
@@ -234,7 +238,7 @@ export default function MailPage() {
                     key={f}
                     onClick={() => setFolder(f)}
                     className={`w-full text-left px-4 py-3 text-sm border-b border-border last:border-b-0 transition-colors ${
-                      folder === f ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50"
+                      folder === f ? "bg-brand-soft font-medium text-foreground shadow-[inset_3px_0_0_rgb(var(--brand))]" : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
                     }`}
                   >
                     {f}
@@ -264,7 +268,7 @@ export default function MailPage() {
                 settings
               ) : (
               <div className="card overflow-hidden">
-                <div className="bg-muted px-6 py-3.5 border-b border-border">
+                <div className="px-5 py-4 border-b border-border">
                   <h3 className="text-sm font-semibold text-foreground">{folder}</h3>
                 </div>
                 <div className="divide-y divide-border">
@@ -279,7 +283,7 @@ export default function MailPage() {
                       <button
                         key={msg.uid}
                         onClick={() => openMessage(msg.uid)}
-                        className="w-full flex items-start gap-3 text-left px-6 py-3.5 hover:bg-muted/50 transition-colors"
+                        className="w-full flex items-start gap-3 text-left px-5 py-3.5 hover:bg-secondary/70 transition-colors"
                       >
                         <Avatar name={folder === "Sent" ? msg.to : msg.from} size="sm" />
                         <div className="min-w-0 flex-1">
@@ -308,8 +312,8 @@ export default function MailPage() {
       </main>
 
       {(loadingMessage || selectedMessage) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4">
-          <div className="card shadow-sm p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
+          <div className="card shadow-lift p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
             {loadingMessage ? (
               <div className="text-center text-sm text-muted-foreground py-8">Loading...</div>
             ) : selectedMessage ? (
@@ -354,7 +358,7 @@ export default function MailPage() {
                       setSelectedMessage(null);
                       openCompose({ to: replyTo, subject: replySubject });
                     }}
-                    className="px-4 py-2 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors"
+                    className="btn btn-secondary"
                   >
                     Reply
                   </button>
@@ -366,8 +370,8 @@ export default function MailPage() {
       )}
 
       {composeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4">
-          <div className="card shadow-sm p-6 w-full max-w-lg">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
+          <div className="card shadow-lift p-6 w-full max-w-lg">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-foreground">Compose</h3>
               <button
@@ -407,13 +411,13 @@ export default function MailPage() {
                 <button
                   onClick={sendCompose}
                   disabled={sendingCompose || !composeDraft.to || !composeDraft.subject || !composeDraft.body}
-                  className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2.5 px-4 rounded-lg transition-all active:translate-y-px"
+                  className="btn btn-primary flex-1"
                 >
                   {sendingCompose ? "Sending..." : "Send"}
                 </button>
                 <button
                   onClick={closeCompose}
-                  className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2.5 px-4 rounded-lg transition-colors"
+                  className="btn btn-secondary flex-1"
                 >
                   Cancel
                 </button>

@@ -53,7 +53,7 @@ export function ContactForm() {
 
   if (sentTo) {
     return (
-      <div role="status" className="bg-card border border-border rounded-2xl shadow-sm p-8 text-left">
+      <div role="status" className="bg-card border border-border rounded-2xl shadow-soft p-8 text-left">
         <h3 className="text-lg font-semibold text-foreground">Thanks, we&apos;ve got your message</h3>
         <p className="text-sm text-muted-foreground mt-2">
           We&apos;ll reply to <span className="text-foreground">{sentTo}</span> soon.
@@ -69,7 +69,7 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={submit} className="relative bg-card border border-border rounded-2xl shadow-sm p-6 sm:p-8 text-left space-y-4">
+    <form onSubmit={submit} className="relative bg-card border border-border rounded-2xl shadow-soft p-6 sm:p-8 text-left space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="contact-name" className="block text-xs font-medium text-muted-foreground mb-1">
@@ -135,7 +135,7 @@ export function ContactForm() {
         <button
           type="submit"
           disabled={sending}
-          className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium px-6 py-3 rounded-lg text-sm transition-all active:translate-y-px"
+          className="btn btn-primary btn-lg"
         >
           {sending ? "Sending..." : "Send message"}
         </button>

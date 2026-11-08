@@ -916,7 +916,11 @@ export default function DialerPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <BudgetBanner />
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Dialer</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Work through your queue: call, take notes and follow up.</p>
+        </div>
+        <div className="mb-6 sm:mb-8">
           <StatRow
             stats={[
               { label: "Pending", value: todayStats.pending },
@@ -928,12 +932,12 @@ export default function DialerPage() {
         </div>
 
         {/* Upload Options */}
-        <div className="card p-6 mb-8">
+        <div className="card p-5 sm:p-6 mb-6 sm:mb-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-sm font-semibold text-foreground">Add Leads</h2>
             <button
               onClick={() => setShowAddLeadForm(!showAddLeadForm)}
-              className="text-sm px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+              className="btn btn-secondary btn-sm"
             >
               {showAddLeadForm ? "Hide" : "Add Manually"}
             </button>
@@ -980,7 +984,7 @@ export default function DialerPage() {
                 <button
                   onClick={handleAddLead}
                   disabled={isAddingLead || !addLeadForm.name || !addLeadForm.phone}
-                  className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2 px-4 rounded-lg transition-all active:translate-y-px"
+                  className="btn btn-primary flex-1"
                 >
                   {isAddingLead ? "Adding..." : "Add Lead"}
                 </button>
@@ -990,7 +994,7 @@ export default function DialerPage() {
                     setAddLeadForm({ name: "", phone: "", email: "", company: "", notes: "" });
                     setAddLeadStatus("");
                   }}
-                  className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2 px-4 rounded-lg transition-colors"
+                  className="btn btn-secondary flex-1"
                 >
                   Cancel
                 </button>
@@ -1004,14 +1008,14 @@ export default function DialerPage() {
           ) : (
             <div className="space-y-4">
               <div>
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Upload Leads</h3>
-                <div className="flex items-center gap-4">
+                <h3 className="eyebrow mb-2">Upload leads</h3>
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                   <input
                     type="file"
                     accept=".csv,.xlsx,.xls"
                     onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
                     disabled={isUploading}
-                    className="text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-secondary file:text-secondary-foreground file:text-sm file:font-medium hover:file:bg-secondary/80 file:cursor-pointer"
+                    className="text-sm text-foreground max-w-full file:mr-4 file:h-10 file:px-4 file:rounded-lg file:border file:border-solid file:border-input file:bg-card file:text-foreground file:text-sm file:font-medium file:shadow-soft hover:file:bg-secondary file:cursor-pointer file:transition-colors"
                   />
                   {uploadStatus && (
                     <span className={`text-sm ${uploadStatus.startsWith("✓") ? "text-accent-green-foreground" : "text-destructive"}`}>
@@ -1026,7 +1030,7 @@ export default function DialerPage() {
                     type="checkbox"
                     checked={replaceExisting}
                     onChange={(e) => setReplaceExisting(e.target.checked)}
-                    className="rounded border-border"
+                    className="h-4 w-4 rounded border-input accent-[#FF9500]"
                   />
                   Replace existing pending leads with this upload
                 </label>
@@ -1035,7 +1039,7 @@ export default function DialerPage() {
                   <button
                     onClick={handleClearPendingLeads}
                     disabled={isClearingLeads || clearableLeadCount === 0}
-                    className="text-sm bg-destructive/10 hover:bg-destructive/20 disabled:opacity-50 disabled:cursor-not-allowed text-destructive font-medium py-2 px-4 rounded-lg transition-colors"
+                    className="btn btn-danger-ghost border border-destructive/25"
                   >
                     {isClearingLeads ? "Clearing..." : `Clear Uncalled Leads (${clearableLeadCount})`}
                   </button>
@@ -1053,7 +1057,7 @@ export default function DialerPage() {
           {/* Queue */}
           <div className="lg:col-span-1">
             <div className="card overflow-hidden">
-              <div className="bg-muted px-6 py-3.5 border-b border-border">
+              <div className="px-5 py-4 border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground">Pending Leads ({leads.length})</h3>
               </div>
               {leadListError && (
@@ -1064,7 +1068,7 @@ export default function DialerPage() {
                   </button>
                 </div>
               )}
-              <div className="max-h-96 overflow-y-auto">
+              <div className="max-h-[28rem] overflow-y-auto">
                 {leads.length === 0 ? (
                   <div className="p-6 text-center text-sm text-muted-foreground">No pending leads</div>
                 ) : (
@@ -1072,12 +1076,12 @@ export default function DialerPage() {
                     <div
                       key={lead.id}
                       className={`flex items-center border-b border-border last:border-b-0 ${
-                        currentLead?.id === lead.id ? "bg-muted border-l-2 border-l-brand" : ""
+                        currentLead?.id === lead.id ? "bg-brand-soft/70 shadow-[inset_3px_0_0_rgb(var(--brand))]" : ""
                       }`}
                     >
                       <button
                         onClick={() => setCurrentLead(lead)}
-                        className="flex-1 min-w-0 flex items-center gap-3 text-left pl-6 pr-2 py-3.5 hover:bg-muted/50 transition-colors"
+                        className="flex-1 min-w-0 flex items-center gap-3 text-left pl-5 pr-2 py-3 hover:bg-secondary/70 transition-colors"
                       >
                         <Avatar name={lead.name} size="sm" />
                         <div className="min-w-0">
@@ -1210,7 +1214,7 @@ export default function DialerPage() {
                 <button
                   onClick={() => handleCall(currentLead)}
                   disabled={startingCall}
-                  className="w-full bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-all active:translate-y-px"
+                  className="btn btn-primary btn-lg w-full"
                 >
                   {startingCall ? "Calling..." : "Call"}
                 </button>
@@ -1224,7 +1228,7 @@ export default function DialerPage() {
             {/* Callbacks */}
             {callbackEntries.length > 0 && (
               <div className="card overflow-hidden">
-                <div className="bg-muted px-6 py-3.5 border-b border-border">
+                <div className="px-5 py-4 border-b border-border">
                   <h3 className="text-sm font-semibold text-foreground">Callbacks ({callbackEntries.length})</h3>
                 </div>
                 <div className="divide-y divide-border">
@@ -1244,7 +1248,7 @@ export default function DialerPage() {
                         <button
                           onClick={() => handleCallbackNow(entry)}
                           disabled={!!activeCall}
-                          className="text-sm px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-lg transition-colors"
+                          className="btn btn-primary btn-sm"
                         >
                           Call Now
                         </button>
@@ -1257,12 +1261,12 @@ export default function DialerPage() {
 
             {/* Call History */}
             <div className="card overflow-hidden">
-              <div className="bg-muted px-6 py-3.5 border-b border-border">
+              <div className="px-5 py-4 border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground">Call History</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted/50 border-b border-border">
+                  <thead className="bg-secondary/60 border-b border-border">
                     <tr>
                       <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Lead</th>
                       <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</th>
@@ -1488,8 +1492,8 @@ export default function DialerPage() {
       )}
 
       {emailModalCall && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4">
-          <div className="card shadow-sm p-6 w-full max-w-lg">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
+          <div className="card shadow-lift p-6 w-full max-w-lg">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-foreground">
                 Follow-up to {emailModalCall.leads?.name || "lead"} ({emailModalCall.leads?.email})
@@ -1536,13 +1540,13 @@ export default function DialerPage() {
                 <button
                   onClick={sendFollowupEmail}
                   disabled={sendingEmail || !emailDraft.subject || !emailDraft.body}
-                  className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2.5 px-4 rounded-lg transition-all active:translate-y-px"
+                  className="btn btn-primary flex-1"
                 >
                   {sendingEmail ? "Sending..." : "Send"}
                 </button>
                 <button
                   onClick={closeEmailModal}
-                  className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2.5 px-4 rounded-lg transition-colors"
+                  className="btn btn-secondary flex-1"
                 >
                   Cancel
                 </button>

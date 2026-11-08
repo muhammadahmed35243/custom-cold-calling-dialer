@@ -171,7 +171,7 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {viewedOrg && !viewedOrg.isOwn ? (
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand/30 bg-brand/10 px-4 py-3 text-sm text-foreground">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand/30 bg-brand-soft px-4 py-3 text-sm text-foreground">
             <span>
               Managing <strong>{viewedOrg.name}</strong> as super admin. Changes here apply to that organization.
             </span>
@@ -183,7 +183,13 @@ export default function AdminDashboard() {
             </button>
           </div>
         ) : (
-          viewedOrg && <h1 className="text-lg font-semibold text-foreground mb-4 tracking-tight">{viewedOrg.name}</h1>
+          viewedOrg && (
+            <div className="mb-6">
+              <div className="eyebrow">Admin</div>
+              <h1 className="mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">{viewedOrg.name}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Calls, agents, numbers, usage and mail for your team.</p>
+            </div>
+          )
         )}
 
         {/* Own organization only; another organization's spend is on its Usage tab. */}
@@ -241,9 +247,9 @@ export default function AdminDashboard() {
         </div>
 
         {tab === "calls" && (
-          <div className="card overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-muted border-b border-border">
+          <div className="card overflow-x-auto">
+            <table className="w-full min-w-[640px]">
+              <thead className="bg-secondary/60 border-b border-border">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Agent</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Lead</th>
@@ -508,7 +514,7 @@ function AgentManagement({
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2.5 px-4 rounded-lg transition-all active:translate-y-px"
+            className="btn btn-primary w-full"
           >
             {loading ? "Adding..." : "Add Agent"}
           </button>
@@ -519,7 +525,7 @@ function AgentManagement({
           columns, so Actions is never cut off. */}
       <div className="card overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-muted border-b border-border">
+          <thead className="bg-secondary/60 border-b border-border">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Email</th>

@@ -82,16 +82,16 @@ export function KnowledgeBaseTab() {
           <button
             type="submit"
             disabled={adding}
-            className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-all active:translate-y-px"
+            className="btn btn-primary"
           >
             {adding ? "Adding (embedding)..." : "Add"}
           </button>
         </form>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-muted border-b border-border">
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[640px]">
+          <thead className="bg-secondary/60 border-b border-border">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Content</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Source</th>

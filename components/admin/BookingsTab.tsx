@@ -29,9 +29,9 @@ export function BookingsTab() {
   }
 
   return (
-    <div className="card overflow-hidden">
-      <table className="w-full">
-        <thead className="bg-muted border-b border-border">
+    <div className="card overflow-x-auto">
+      <table className="w-full min-w-[640px]">
+        <thead className="bg-secondary/60 border-b border-border">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Caller</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Invitee</th>

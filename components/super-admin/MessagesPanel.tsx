@@ -206,7 +206,7 @@ export function MessagesPanel({ onNewCountChange }: { onNewCountChange?: (count:
                 <div className="flex flex-wrap items-center gap-3 pt-1">
                   <a
                     href={`mailto:${m.sender_email}?subject=${encodeURIComponent(replySubject)}`}
-                    className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground py-1.5 px-3 rounded-md transition-colors"
+                    className="btn btn-primary btn-sm"
                   >
                     Reply by email
                   </a>

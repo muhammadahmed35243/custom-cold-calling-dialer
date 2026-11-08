@@ -430,7 +430,7 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
                   <button
                     type="submit"
                     disabled={searching}
-                    className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-all active:translate-y-px"
+                    className="btn btn-primary"
                   >
                     {searching ? "Searching..." : "Search"}
                   </button>
@@ -531,7 +531,7 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
                         </div>
                         <button
                           onClick={() => setConfirming(n)}
-                          className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground py-1.5 px-3 rounded-md transition-colors"
+                          className="btn btn-primary btn-sm"
                         >
                           Buy
                         </button>
@@ -546,7 +546,7 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
       )}
 
       {confirming && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-lg p-6 space-y-4">
             <h3 className="text-sm font-semibold text-foreground">Confirm purchase</h3>
             <div className="space-y-1.5">
@@ -574,14 +574,14 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
               <button
                 onClick={handlePurchase}
                 disabled={purchasing}
-                className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-all active:translate-y-px"
+                className="btn btn-primary flex-1"
               >
                 {purchasing ? "Buying..." : "Confirm Purchase"}
               </button>
               <button
                 onClick={() => setConfirming(null)}
                 disabled={purchasing}
-                className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-colors"
+                className="btn btn-secondary flex-1"
               >
                 Cancel
               </button>
@@ -591,7 +591,7 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
       )}
 
       {releasing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-lg p-6 space-y-4">
             <h3 className="text-sm font-semibold text-foreground">Release this number?</h3>
             <p className="text-sm text-foreground font-mono">{releasing.phone_number}</p>
@@ -603,14 +603,14 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
               <button
                 onClick={handleRelease}
                 disabled={releaseBusy}
-                className="flex-1 bg-destructive hover:bg-destructive/90 disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg text-sm transition-all active:translate-y-px"
+                className="btn btn-danger flex-1"
               >
                 {releaseBusy ? "Releasing..." : "Release Number"}
               </button>
               <button
                 onClick={() => setReleasing(null)}
                 disabled={releaseBusy}
-                className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-colors"
+                className="btn btn-secondary flex-1"
               >
                 Cancel
               </button>
@@ -636,7 +636,7 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-muted border-b border-border">
+              <thead className="bg-secondary/60 border-b border-border">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Number</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Country</th>

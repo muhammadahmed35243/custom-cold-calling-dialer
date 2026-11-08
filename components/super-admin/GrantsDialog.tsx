@@ -152,7 +152,7 @@ export function GrantsDialog({
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
       <div className="w-full max-w-2xl max-h-full flex flex-col bg-card border border-border rounded-2xl shadow-lg">
         <div className="px-6 pt-6 pb-4 border-b border-border">
           <h2 className="text-base font-semibold text-foreground">Free credit &amp; bonus minutes</h2>
@@ -277,7 +277,7 @@ export function GrantsDialog({
             <button
               type="submit"
               disabled={saving}
-              className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-all active:translate-y-px"
+              className="btn btn-primary"
             >
               {saving ? "Saving..." : kind === "credit" ? "Give credit" : "Give minutes"}
             </button>
@@ -339,7 +339,7 @@ export function GrantsDialog({
         <div className="px-6 py-4 border-t border-border flex justify-end">
           <button
             onClick={onClose}
-            className="bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-colors"
+            className="btn btn-secondary"
           >
             Done
           </button>

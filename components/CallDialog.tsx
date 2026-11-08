@@ -48,7 +48,7 @@ export function CallDialog({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
       <div className="w-full max-w-lg bg-card border border-border rounded-2xl shadow-lg p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Call in progress</h3>
@@ -83,7 +83,7 @@ export function CallDialog({
           {onToggleMute && (
             <button
               onClick={onToggleMute}
-              className="px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors"
+              className="btn btn-secondary btn-sm"
             >
               Mute
             </button>
@@ -91,7 +91,7 @@ export function CallDialog({
           <button
             onClick={onHangUp}
             disabled={hangingUp}
-            className="px-4 py-2 text-sm font-medium bg-destructive hover:bg-destructive/90 disabled:opacity-50 text-destructive-foreground rounded-lg transition-colors"
+            className="btn btn-danger"
           >
             {hangingUp ? "Hanging up..." : "Hang Up"}
           </button>

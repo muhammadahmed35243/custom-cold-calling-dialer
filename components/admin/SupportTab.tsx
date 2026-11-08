@@ -165,7 +165,7 @@ export function SupportTab() {
         <button
           type="submit"
           disabled={sending}
-          className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-all active:translate-y-px"
+          className="btn btn-primary"
         >
           {sending ? "Sending..." : "Send message"}
         </button>

@@ -273,7 +273,7 @@ export function MailboxSettings({
               <button
                 onClick={reconnect}
                 disabled={!!busy || !info.ready}
-                className="text-xs font-medium bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground py-1.5 px-3 rounded-md transition-colors"
+                className="btn btn-primary btn-sm"
               >
                 {busy === "google" ? "Opening Google..." : mailbox.status === "reconnect_needed" ? "Reconnect" : "Reconnect or change"}
               </button>
@@ -489,7 +489,7 @@ export function MailboxSettings({
               <button
                 type="submit"
                 disabled={!!busy}
-                className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-all active:translate-y-px"
+                className="btn btn-primary"
               >
                 {busy === "connect" ? "Testing connection..." : "Connect"}
               </button>

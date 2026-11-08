@@ -209,7 +209,7 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
         <button
           onClick={downloadCsv}
           disabled={!usage || loading}
-          className="bg-secondary hover:bg-secondary/80 disabled:opacity-50 text-secondary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-colors"
+          className="btn btn-secondary"
         >
           Download statement (CSV)
         </button>
@@ -292,7 +292,7 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-muted border-b border-border">
+                    <thead className="bg-secondary/60 border-b border-border">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Date</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Agent</th>
@@ -358,7 +358,7 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-muted border-b border-border">
+                    <thead className="bg-secondary/60 border-b border-border">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Number</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Held</th>

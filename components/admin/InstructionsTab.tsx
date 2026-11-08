@@ -74,7 +74,7 @@ export function InstructionsTab() {
           <button
             onClick={() => save("core_instructions", coreInstructions)}
             disabled={savingKey === "core_instructions"}
-            className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-all active:translate-y-px"
+            className="btn btn-primary"
           >
             {savingKey === "core_instructions" ? "Saving..." : "Save"}
           </button>
@@ -100,7 +100,7 @@ export function InstructionsTab() {
           <button
             onClick={() => save("timely_info", timelyInfo)}
             disabled={savingKey === "timely_info"}
-            className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-all active:translate-y-px"
+            className="btn btn-primary"
           >
             {savingKey === "timely_info" ? "Saving..." : "Save"}
           </button>

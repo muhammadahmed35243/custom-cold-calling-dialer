@@ -1,8 +1,12 @@
-const AVATAR_TONES = ["bg-brand text-brand-foreground", "bg-foreground text-background", "bg-muted text-muted-foreground"];
+const AVATAR_TONES = [
+  "bg-brand-soft text-brand-strong ring-1 ring-inset ring-brand/25",
+  "bg-secondary text-foreground ring-1 ring-inset ring-border",
+  "bg-foreground/90 text-background",
+];
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
+  if (parts.length === 0 || /^[\-–—]+$/.test(name.trim())) return "?";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
