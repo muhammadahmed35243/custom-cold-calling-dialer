@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { authedFetch } from "@/lib/voice-agent/authedFetch";
 import type { PhoneNumber } from "@/lib/supabase";
 
 type AvailableNumber = {
   phoneNumber: string;
+  display: string;
   phoneNumberType: string;
   countryCode: string;
+  locality: string | null;
+  region: string | null;
+  rateCenter: string | null;
+  features: string[];
+  bestEffort: boolean;
+  quickship: boolean;
   // What the organization pays (Telnyx's price plus its number markup).
   monthlyPrice: number | null;
   upfrontPrice: number | null;
@@ -16,8 +23,76 @@ type AvailableNumber = {
   upfrontCost?: number | null;
 };
 
+type SearchFilters = {
+  country: string;
+  type: string;
+  areaCode: string;
+  city: string;
+  state: string;
+  contains: string;
+  features: string[];
+};
+
+type Sort = "price-asc" | "price-desc" | "upfront-asc" | "city" | "number";
+
+const TYPE_LABELS: Record<string, string> = {
+  local: "Local",
+  toll_free: "Toll-free",
+  mobile: "Mobile",
+  national: "National",
+};
+
+// Shown in this order on each number.
+const FEATURE_LABELS: [string, string][] = [
+  ["voice", "Voice"],
+  ["sms", "SMS"],
+  ["mms", "MMS"],
+  ["fax", "Fax"],
+  ["emergency", "911"],
+  ["hd_voice", "HD voice"],
+];
+
+const FEATURE_FILTERS: [string, string][] = [
+  ["sms", "SMS"],
+  ["mms", "MMS"],
+  ["fax", "Fax"],
+  ["emergency", "911 calling"],
+];
+
+const EMPTY_FILTERS: SearchFilters = { country: "US", type: "", areaCode: "", city: "", state: "", contains: "", features: [] };
+
+const inputClass =
+  "w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring";
+
 function formatMoney(n: number | null | undefined) {
   return n === null || n === undefined ? "-" : `$${Number(n).toFixed(2)}`;
+}
+
+function location(n: AvailableNumber) {
+  return [n.locality, n.region].filter(Boolean).join(", ") || n.countryCode;
+}
+
+// "US · area code 415 · Local · with SMS, MMS"
+function describeSearch(f: SearchFilters) {
+  const parts = [f.country];
+  if (f.type) parts.push(TYPE_LABELS[f.type] || f.type);
+  if (f.areaCode) parts.push(`area code ${f.areaCode}`);
+  if (f.city) parts.push(f.city);
+  if (f.state) parts.push(f.state);
+  if (f.contains) parts.push(`containing ${f.contains}`);
+  if (f.features.length) {
+    parts.push(`with ${f.features.map((k) => FEATURE_FILTERS.find(([key]) => key === k)?.[1] || k).join(", ")}`);
+  }
+  return parts.join(" · ");
+}
+
+function Badge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: "neutral" | "green" | "brand" }) {
+  const tones = {
+    neutral: "bg-background text-foreground border border-border",
+    green: "bg-accent-green/15 text-accent-green-foreground",
+    brand: "bg-brand/15 text-foreground",
+  };
+  return <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded-md ${tones[tone]}`}>{children}</span>;
 }
 
 // orgQuery is "?orgId=..." when the super admin manages another organization,
@@ -26,9 +101,11 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
   const [owned, setOwned] = useState<PhoneNumber[]>([]);
   const [limit, setLimit] = useState<number | null>(null);
   const [loadingOwned, setLoadingOwned] = useState(true);
-  const [country, setCountry] = useState("US");
-  const [areaCode, setAreaCode] = useState("");
+  const [filters, setFilters] = useState<SearchFilters>(EMPTY_FILTERS);
+  const [searchedFor, setSearchedFor] = useState<SearchFilters | null>(null);
   const [searchResults, setSearchResults] = useState<AvailableNumber[] | null>(null);
+  const [sort, setSort] = useState<Sort>("price-asc");
+  const [maxMonthly, setMaxMonthly] = useState("");
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<AvailableNumber | null>(null);
@@ -39,6 +116,15 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
 
   const orgParam = orgQuery ? `&${orgQuery.slice(1)}` : "";
   const atLimit = limit !== null && owned.length >= limit;
+
+  const setFilter = <K extends keyof SearchFilters>(key: K, value: SearchFilters[K]) =>
+    setFilters((prev) => ({ ...prev, [key]: value }));
+
+  const toggleFeature = (key: string) =>
+    setFilters((prev) => ({
+      ...prev,
+      features: prev.features.includes(key) ? prev.features.filter((f) => f !== key) : [...prev.features, key],
+    }));
 
   const loadOwned = async () => {
     setLoadingOwned(true);
@@ -66,22 +152,67 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
+    const query: SearchFilters = {
+      ...filters,
+      country: filters.country.trim().toUpperCase(),
+      areaCode: filters.areaCode.trim(),
+      city: filters.city.trim(),
+      state: filters.state.trim().toUpperCase(),
+      contains: filters.contains.trim(),
+    };
     setSearching(true);
     setError(null);
     setSearchResults(null);
     try {
-      const params = new URLSearchParams({ country: country.trim() });
-      if (areaCode.trim()) params.set("areaCode", areaCode.trim());
+      const params = new URLSearchParams({ country: query.country });
+      if (query.type) params.set("type", query.type);
+      if (query.areaCode) params.set("areaCode", query.areaCode);
+      if (query.city) params.set("city", query.city);
+      if (query.state) params.set("state", query.state);
+      if (query.contains) params.set("contains", query.contains);
+      if (query.features.length) params.set("features", query.features.join(","));
       const res = await authedFetch(`/api/admin/phone-numbers/search?${params.toString()}${orgParam}`);
       const body = await res.json();
-      if (res.ok) setSearchResults(body.numbers || []);
-      else setError(body.error || "Search failed");
+      if (res.ok) {
+        setSearchResults(body.numbers || []);
+        setSearchedFor(query);
+      } else {
+        setError(body.error || "Search failed");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
     } finally {
       setSearching(false);
     }
   };
+
+  // Max price and sorting apply to the results on screen, without searching again.
+  const visibleResults = useMemo(() => {
+    if (!searchResults) return [];
+    const max = maxMonthly.trim() === "" ? null : Number(maxMonthly);
+    const price = (n: number | null) => (n === null ? Number.POSITIVE_INFINITY : n);
+    const list = searchResults.filter((n) => max === null || Number.isNaN(max) || price(n.monthlyPrice) <= max);
+    const byNumber = (a: AvailableNumber, b: AvailableNumber) => a.phoneNumber.localeCompare(b.phoneNumber);
+    const sorted = [...list];
+    switch (sort) {
+      case "price-asc":
+        sorted.sort((a, b) => price(a.monthlyPrice) - price(b.monthlyPrice) || price(a.upfrontPrice) - price(b.upfrontPrice) || byNumber(a, b));
+        break;
+      case "price-desc":
+        sorted.sort((a, b) => price(b.monthlyPrice) - price(a.monthlyPrice) || price(b.upfrontPrice) - price(a.upfrontPrice) || byNumber(a, b));
+        break;
+      case "upfront-asc":
+        sorted.sort((a, b) => price(a.upfrontPrice) - price(b.upfrontPrice) || price(a.monthlyPrice) - price(b.monthlyPrice) || byNumber(a, b));
+        break;
+      case "city":
+        sorted.sort((a, b) => location(a).localeCompare(location(b)) || byNumber(a, b));
+        break;
+      case "number":
+        sorted.sort(byNumber);
+        break;
+    }
+    return sorted;
+  }, [searchResults, sort, maxMonthly]);
 
   const handlePurchase = async () => {
     if (!confirming) return;
@@ -140,6 +271,13 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
     }
   };
 
+  const featureChips = (n: AvailableNumber) =>
+    FEATURE_LABELS.filter(([key]) => n.features.includes(key)).map(([key, label]) => (
+      <span key={key} className="text-[11px] text-muted-foreground bg-background border border-border rounded px-1.5 py-0.5">
+        {label}
+      </span>
+    ));
+
   return (
     <div className="space-y-6">
       {error && (
@@ -159,74 +297,235 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
         <div className="bg-card border border-border rounded-xl p-6">
           <h2 className="text-sm font-semibold text-foreground mb-1">Buy a Number</h2>
           <p className="text-xs text-muted-foreground mb-4">
-            Search available numbers by country. Prices vary a lot by country &mdash; check before buying. Numbers are
-            billed every month until you release them.
+            Search available numbers. Prices vary a lot by country, area and type &mdash; check before buying. Numbers
+            are billed every month until you release them.
           </p>
+
           {atLimit ? (
             <p className="text-sm text-muted-foreground">
               You have {limit} of {limit} numbers. Release one below to buy another, or ask JETZT to raise the limit.
             </p>
           ) : (
-            <form onSubmit={handleSearch} className="flex flex-wrap items-end gap-3">
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">Country (ISO code)</label>
-                <input
-                  type="text"
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value.toUpperCase())}
-                  placeholder="US"
-                  maxLength={2}
-                  required
-                  className="w-24 px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
-                />
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div>
+                  <label htmlFor="num-country" className="block text-xs text-muted-foreground mb-1">
+                    Country
+                  </label>
+                  <input
+                    id="num-country"
+                    type="text"
+                    value={filters.country}
+                    onChange={(e) => setFilter("country", e.target.value.toUpperCase())}
+                    placeholder="US"
+                    maxLength={2}
+                    required
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="num-type" className="block text-xs text-muted-foreground mb-1">
+                    Type
+                  </label>
+                  <select
+                    id="num-type"
+                    value={filters.type}
+                    onChange={(e) => setFilter("type", e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">Any type</option>
+                    <option value="local">Local</option>
+                    <option value="toll_free">Toll-free</option>
+                    <option value="mobile">Mobile</option>
+                    <option value="national">National</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="num-area" className="block text-xs text-muted-foreground mb-1">
+                    Area code
+                  </label>
+                  <input
+                    id="num-area"
+                    type="text"
+                    inputMode="numeric"
+                    value={filters.areaCode}
+                    onChange={(e) => setFilter("areaCode", e.target.value.replace(/\D/g, ""))}
+                    placeholder="415"
+                    maxLength={5}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="num-city" className="block text-xs text-muted-foreground mb-1">
+                    City
+                  </label>
+                  <input
+                    id="num-city"
+                    type="text"
+                    value={filters.city}
+                    onChange={(e) => setFilter("city", e.target.value)}
+                    placeholder="Chicago"
+                    maxLength={60}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="num-state" className="block text-xs text-muted-foreground mb-1">
+                    State
+                  </label>
+                  <input
+                    id="num-state"
+                    type="text"
+                    value={filters.state}
+                    onChange={(e) => setFilter("state", e.target.value.toUpperCase())}
+                    placeholder="IL"
+                    maxLength={6}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="num-contains" className="block text-xs text-muted-foreground mb-1">
+                    Contains digits
+                  </label>
+                  <input
+                    id="num-contains"
+                    type="text"
+                    inputMode="numeric"
+                    value={filters.contains}
+                    onChange={(e) => setFilter("contains", e.target.value.replace(/\D/g, ""))}
+                    placeholder="777"
+                    maxLength={10}
+                    className={inputClass}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">Area code (optional)</label>
-                <input
-                  type="text"
-                  value={areaCode}
-                  onChange={(e) => setAreaCode(e.target.value)}
-                  placeholder="415"
-                  className="w-28 px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
-                />
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <legend className="sr-only">Must support</legend>
+                  <span className="text-xs text-muted-foreground">Must support:</span>
+                  {FEATURE_FILTERS.map(([key, label]) => (
+                    <label key={key} className="flex items-center gap-1.5 text-sm text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={filters.features.includes(key)}
+                        onChange={() => toggleFeature(key)}
+                        className="rounded border-border"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </fieldset>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFilters(EMPTY_FILTERS)}
+                    className="text-sm text-muted-foreground hover:text-foreground px-3 py-2 transition-colors"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={searching}
+                    className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-all active:translate-y-px"
+                  >
+                    {searching ? "Searching..." : "Search"}
+                  </button>
+                </div>
               </div>
-              <button
-                type="submit"
-                disabled={searching}
-                className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-2 px-4 rounded-lg text-sm transition-all active:translate-y-px"
-              >
-                {searching ? "Searching..." : "Search"}
-              </button>
             </form>
           )}
 
-          {searchResults && !atLimit && (
-            <div className="mt-5 border-t border-border pt-4">
+          {searchResults && searchedFor && !atLimit && (
+            <div className="mt-5 border-t border-border pt-4 space-y-3">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <p className="text-sm text-muted-foreground">
+                  <span className="text-foreground font-medium">
+                    {visibleResults.length === searchResults.length
+                      ? `${searchResults.length} number${searchResults.length === 1 ? "" : "s"}`
+                      : `${visibleResults.length} of ${searchResults.length} numbers`}
+                  </span>{" "}
+                  for {describeSearch(searchedFor)}
+                </p>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <label htmlFor="num-max" className="block text-xs text-muted-foreground mb-1">
+                      Max per month ($)
+                    </label>
+                    <input
+                      id="num-max"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={maxMonthly}
+                      onChange={(e) => setMaxMonthly(e.target.value)}
+                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                      placeholder="Any"
+                      className={`${inputClass} w-28`}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="num-sort" className="block text-xs text-muted-foreground mb-1">
+                      Sort by
+                    </label>
+                    <select id="num-sort" value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={inputClass}>
+                      <option value="price-asc">Monthly price: low to high</option>
+                      <option value="price-desc">Monthly price: high to low</option>
+                      <option value="upfront-asc">Upfront price: low to high</option>
+                      <option value="city">City (A to Z)</option>
+                      <option value="number">Number</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               {searchResults.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No numbers found for that search.</p>
+                <p className="text-sm text-muted-foreground">
+                  No numbers match. Try removing a filter &mdash; Telnyx may have none in that area right now.
+                </p>
+              ) : visibleResults.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No numbers at or under that monthly price.</p>
               ) : (
                 <div className="space-y-2">
-                  {searchResults.map((n) => (
-                    <div key={n.phoneNumber} className="flex items-center justify-between gap-3 bg-secondary rounded-lg p-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-mono text-foreground">{n.phoneNumber}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {n.phoneNumberType} &middot; {formatMoney(n.monthlyPrice)}/mo &middot;{" "}
-                          {formatMoney(n.upfrontPrice)} upfront
+                  {visibleResults.map((n) => (
+                    <div
+                      key={n.phoneNumber}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-secondary rounded-lg p-4"
+                    >
+                      <div className="min-w-0 space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-mono font-medium text-foreground">{n.display}</span>
+                          <Badge>{TYPE_LABELS[n.phoneNumberType] || n.phoneNumberType}</Badge>
+                          {n.quickship && <Badge tone="green">Ready now</Badge>}
+                          {n.bestEffort && <Badge tone="brand">Close match</Badge>}
+                        </div>
+                        <div className="text-xs text-muted-foreground" title={n.rateCenter ? `Rate center: ${n.rateCenter}` : undefined}>
+                          {location(n)}
+                        </div>
+                        <div className="flex flex-wrap gap-1">{featureChips(n)}</div>
+                      </div>
+                      <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
+                        <div className="sm:text-right">
+                          <div className="text-sm font-semibold text-foreground tabular-nums">
+                            {formatMoney(n.monthlyPrice)}
+                            <span className="text-xs font-normal text-muted-foreground">/mo</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground tabular-nums">
+                            {formatMoney(n.upfrontPrice)} upfront
+                          </div>
                           {n.monthlyCost !== undefined && (
-                            <span>
-                              {" "}
-                              &middot; Telnyx cost {formatMoney(n.monthlyCost)}/mo, {formatMoney(n.upfrontCost)} upfront
-                            </span>
+                            <div className="text-[11px] text-muted-foreground tabular-nums">
+                              Telnyx {formatMoney(n.monthlyCost)}/mo &middot; {formatMoney(n.upfrontCost)}
+                            </div>
                           )}
                         </div>
+                        <button
+                          onClick={() => setConfirming(n)}
+                          className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground py-1.5 px-3 rounded-md transition-colors"
+                        >
+                          Buy
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setConfirming(n)}
-                        className="shrink-0 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground py-1.5 px-3 rounded-md transition-colors"
-                      >
-                        Buy
-                      </button>
                     </div>
                   ))}
                 </div>
@@ -240,12 +539,28 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
           <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-lg p-6 space-y-4">
             <h3 className="text-sm font-semibold text-foreground">Confirm purchase</h3>
-            <p className="text-sm text-foreground font-mono">{confirming.phoneNumber}</p>
-            <p className="text-sm text-muted-foreground">
-              {formatMoney(confirming.monthlyPrice)} a month plus {formatMoney(confirming.upfrontPrice)} upfront, added to
-              this organization&apos;s bill until the number is released.
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-base text-foreground font-mono font-medium">{confirming.display}</span>
+                <Badge>{TYPE_LABELS[confirming.phoneNumberType] || confirming.phoneNumberType}</Badge>
+              </div>
+              <div className="text-sm text-muted-foreground">{location(confirming)}</div>
+              <div className="flex flex-wrap gap-1">{featureChips(confirming)}</div>
+            </div>
+            <dl className="grid grid-cols-2 gap-y-1 text-sm">
+              <dt className="text-muted-foreground">Monthly</dt>
+              <dd className="text-right text-foreground tabular-nums">{formatMoney(confirming.monthlyPrice)}</dd>
+              <dt className="text-muted-foreground">Upfront</dt>
+              <dd className="text-right text-foreground tabular-nums">{formatMoney(confirming.upfrontPrice)}</dd>
+              <dt className="text-foreground font-medium">This month</dt>
+              <dd className="text-right text-foreground font-medium tabular-nums">
+                {formatMoney((confirming.monthlyPrice ?? 0) + (confirming.upfrontPrice ?? 0))}
+              </dd>
+            </dl>
+            <p className="text-xs text-muted-foreground">
+              Added to this organization&apos;s bill every month until the number is released.
             </p>
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-1">
               <button
                 onClick={handlePurchase}
                 disabled={purchasing}

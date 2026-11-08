@@ -190,14 +190,70 @@ export type AvailableNumber = {
   countryCode: string;
   monthlyCost: number | null;
   upfrontCost: number | null;
+  // Where the number is and what it can do, from Telnyx's listing.
+  locality: string | null;
+  region: string | null;
+  rateCenter: string | null;
+  features: string[];
+  // Not an exact match for the filters (Telnyx suggested it as close).
+  bestEffort: boolean;
+  // Ready to use as soon as it's bought.
+  quickship: boolean;
 };
 
-export async function searchAvailableNumbers(countryCode: string, areaCode?: string): Promise<AvailableNumber[]> {
+export const NUMBER_TYPES = ["local", "toll_free", "mobile", "national"] as const;
+export type NumberType = (typeof NUMBER_TYPES)[number];
+export const NUMBER_FEATURES = ["sms", "mms", "fax", "emergency"] as const;
+
+export type NumberSearch = {
+  countryCode: string;
+  areaCode?: string;
+  locality?: string;
+  administrativeArea?: string;
+  numberType?: NumberType;
+  features?: string[];
+  contains?: string;
+};
+
+// Telnyx's search returns at most 50 numbers at a time.
+const SEARCH_LIMIT = 50;
+
+function titleCase(value: string | null): string | null {
+  return value
+    ? value.toLowerCase().replace(/(^|[\s\-/(:.'])([a-z])/g, (_, before: string, letter: string) => before + letter.toUpperCase())
+    : null;
+}
+
+function toAvailableNumber(n: any, countryCode: string): AvailableNumber {
+  const region = (type: string): string | null =>
+    (n.region_information || []).find((r: any) => r.region_type === type)?.region_name ?? null;
+  const cost = (value: unknown) => (value != null && value !== "" ? Number(value) : null);
+  return {
+    phoneNumber: n.phone_number,
+    phoneNumberType: n.phone_number_type,
+    countryCode: countryCode.toUpperCase(),
+    monthlyCost: cost(n.cost_information?.monthly_cost),
+    upfrontCost: cost(n.cost_information?.upfront_cost),
+    locality: titleCase(region("location")),
+    region: region("state"),
+    rateCenter: region("rate_center"),
+    features: (n.features || []).map((f: any) => f?.name).filter(Boolean),
+    bestEffort: !!n.best_effort,
+    quickship: !!n.quickship,
+  };
+}
+
+export async function searchAvailableNumbers(search: NumberSearch): Promise<AvailableNumber[]> {
   const params = new URLSearchParams({
-    "filter[country_code]": countryCode.toUpperCase(),
-    "filter[limit]": "20",
+    "filter[country_code]": search.countryCode.toUpperCase(),
+    "filter[limit]": String(SEARCH_LIMIT),
   });
-  if (areaCode) params.set("filter[national_destination_code]", areaCode);
+  if (search.areaCode) params.set("filter[national_destination_code]", search.areaCode);
+  if (search.locality) params.set("filter[locality]", search.locality);
+  if (search.administrativeArea) params.set("filter[administrative_area]", search.administrativeArea);
+  if (search.numberType) params.set("filter[phone_number_type]", search.numberType);
+  if (search.contains) params.set("filter[phone_number][contains]", search.contains);
+  for (const feature of search.features || []) params.append("filter[features][]", feature);
 
   const res = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?${params.toString()}`, {
     headers: { Authorization: `Bearer ${process.env.TELNYX_API_KEY}` },
@@ -208,13 +264,10 @@ export async function searchAvailableNumbers(countryCode: string, areaCode?: str
     throw new Error(`Number search failed (${res.status}): ${JSON.stringify(data).slice(0, 300)}`);
   }
 
-  return (data.data || []).map((n: any) => ({
-    phoneNumber: n.phone_number,
-    phoneNumberType: n.phone_number_type,
-    countryCode,
-    monthlyCost: n.cost_information?.monthly_cost ? Number(n.cost_information.monthly_cost) : null,
-    upfrontCost: n.cost_information?.upfront_cost ? Number(n.cost_information.upfront_cost) : null,
-  }));
+  const numbers: AvailableNumber[] = (data.data || []).map((n: any) => toAvailableNumber(n, search.countryCode));
+  // Telnyx doesn't reliably apply the features filter, so enforce it here.
+  const wanted = search.features || [];
+  return wanted.length ? numbers.filter((n) => wanted.every((f) => n.features.includes(f))) : numbers;
 }
 
 // Looks one number up in Telnyx's inventory, to read its real price on the
@@ -237,14 +290,7 @@ export async function findAvailableNumber(phoneNumber: string, countryCode: stri
   const match = ((await res.json()).data || []).find(
     (n: any) => String(n.phone_number || "").replace(/\D/g, "") === digits
   );
-  if (!match) return null;
-  return {
-    phoneNumber: match.phone_number,
-    phoneNumberType: match.phone_number_type,
-    countryCode: countryCode.toUpperCase(),
-    monthlyCost: match.cost_information?.monthly_cost != null ? Number(match.cost_information.monthly_cost) : null,
-    upfrontCost: match.cost_information?.upfront_cost != null ? Number(match.cost_information.upfront_cost) : null,
-  };
+  return match ? toAvailableNumber(match, countryCode) : null;
 }
 
 // Gives a number back to Telnyx, which stops its monthly charge. It can't be
