@@ -51,6 +51,10 @@ export default function DialerPage() {
   const { setReady } = useAppReady();
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
+  // Set from the click until the call screen takes over, so a double click
+  // can't dial the same lead twice (and bill two calls).
+  const startingCallRef = useRef(false);
+  const [startingCall, setStartingCall] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
@@ -229,14 +233,16 @@ export default function DialerPage() {
   };
 
   const handleCall = async (lead: Lead) => {
-    if (!user) return;
-
-    if (callMode === "webrtc") {
-      await handleWebrtcCall(lead);
-      return;
-    }
+    if (!user || startingCallRef.current) return;
+    startingCallRef.current = true;
+    setStartingCall(true);
 
     try {
+      if (callMode === "webrtc") {
+        await handleWebrtcCall(lead);
+        return;
+      }
+
       const { data: { session } } = await supabaseAuth.auth.getSession();
       if (!session) {
         setCallStatus("Session expired, please login again");
@@ -262,6 +268,9 @@ export default function DialerPage() {
       }
     } catch (error) {
       setCallStatus(`Error: ${error}`);
+    } finally {
+      startingCallRef.current = false;
+      setStartingCall(false);
     }
   };
 
@@ -1101,9 +1110,10 @@ export default function DialerPage() {
 
                 <button
                   onClick={() => handleCall(currentLead)}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-all active:translate-y-px"
+                  disabled={startingCall}
+                  className="w-full bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-all active:translate-y-px"
                 >
-                  Call
+                  {startingCall ? "Calling..." : "Call"}
                 </button>
               </div>
             ) : (
