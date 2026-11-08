@@ -11,6 +11,7 @@ import {
   canManageShared,
   googleMailConfigured,
   isAuthFailure,
+  listSharedAccess,
   MailboxError,
   mailboxErrorResponse,
   ownMailbox,
@@ -27,7 +28,8 @@ const SMTP_PORTS = [465, 587, 25, 2525];
 const IMAP_PORTS = [993, 143];
 
 // The caller's own mailbox and their organization's shared one (for the super
-// admin, ?orgId= picks the organization), plus what can be connected.
+// admin, ?orgId= picks the organization), plus what can be connected and, for
+// admins, which agents can use the shared one.
 export async function GET(req: NextRequest) {
   const { actor, error: authError } = await getActor(req);
   if (authError) return authError;
@@ -38,12 +40,17 @@ export async function GET(req: NextRequest) {
       orgId === actor.orgId ? ownMailbox(actor.agentId) : Promise.resolve(null),
       sharedMailbox(orgId),
     ]);
+    const manage = canManageShared(actor, orgId);
+    const jetztMailbox = orgId === FOUNDING_ORG_ID && !!envMailbox();
     return NextResponse.json({
       own: own ? summarize(own) : null,
       shared: shared ? summarize(shared) : null,
-      // JETZT's original mailbox stands in while JETZT has no shared one.
-      jetztFallback: orgId === FOUNDING_ORG_ID && !shared && !!envMailbox(),
-      canManageShared: canManageShared(actor, orgId),
+      // JETZT's original mailbox stands in while JETZT has no shared one...
+      jetztFallback: jetztMailbox && !shared,
+      // ...and afterwards for JETZT agents without access to the shared one.
+      jetztMailbox,
+      canManageShared: manage,
+      sharedAccess: shared && manage ? await listSharedAccess(shared) : null,
       googleAvailable: googleMailConfigured(),
       ready: encryptionReady(),
     });

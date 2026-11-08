@@ -7,9 +7,10 @@ import { decrypt, encrypt } from "./crypto";
 import { envMailbox, type MailboxConfig } from "./mailer";
 
 // Connected mailboxes (migration 0013): one shared per organization, one per
-// agent. Mail uses the agent's own first, then the organization's shared one,
-// then -- JETZT only -- the original SMTP_* mailbox. Secrets are encrypted
-// (lib/crypto.ts) and never leave the server.
+// agent. Mail uses the agent's own first, then the organization's shared one
+// (as far as an admin lets them -- migration 0014), then -- JETZT only -- the
+// original SMTP_* mailbox. Secrets are encrypted (lib/crypto.ts) and never
+// leave the server.
 
 export type MailboxRow = {
   id: string;
@@ -40,7 +41,7 @@ export class MailboxError extends Error {
   constructor(
     message: string,
     public status = 400,
-    public code?: "no_mailbox" | "no_alias" | "reconnect"
+    public code?: "no_mailbox" | "no_alias" | "no_access" | "reconnect"
   ) {
     super(message);
   }
@@ -75,9 +76,11 @@ export async function sharedMailbox(orgId: string): Promise<MailboxRow | null> {
 }
 
 function reconnectMessage(row: MailboxRow): string {
+  // Agents can't reconnect the organization's mailbox themselves.
+  const where = row.agent_id ? "in Mail → Mailbox settings" : "(an admin does this in Admin → Mailbox)";
   return row.kind === "google_oauth"
-    ? `The Google connection for ${row.email} has expired (Google asks again every 7 days for now). Reconnect it in Mail → Mailbox settings.`
-    : `${row.email} stopped accepting its password. Reconnect it with the current password in Mail → Mailbox settings.`;
+    ? `The Google connection for ${row.email} has expired (Google asks again every 7 days for now). Reconnect it ${where}.`
+    : `${row.email} stopped accepting its password. Reconnect it with the current password ${where}.`;
 }
 
 async function markReconnect(row: MailboxRow, detail: string) {
@@ -213,18 +216,98 @@ export async function configFor(row: MailboxRow): Promise<MailboxConfig> {
   };
 }
 
+// --- Who can use the shared mailbox (migration 0014) --------------------------
+
+// "full": the whole mailbox, sending from its address. "alias": only mail to
+// or from the agent's alias, sending as the alias. "none": nothing.
+export type SharedAccess = "full" | "alias" | "none";
+export const SHARED_ACCESS: readonly SharedAccess[] = ["full", "alias", "none"];
+
+function domainOf(address: string): string {
+  return address.slice(address.lastIndexOf("@") + 1).toLowerCase();
+}
+
+// Until an admin chooses: agents whose alias is on the mailbox's own domain
+// see their alias's mail; nobody else gets in. A Gmail address has no
+// aliases, so connecting one shares nothing until the admin picks who can use it.
+export function defaultSharedAccess(alias: string | null, mailboxEmail: string): SharedAccess {
+  return alias && domainOf(alias) === domainOf(mailboxEmail) ? "alias" : "none";
+}
+
+// What an agent can use, given their current alias. An "alias" choice is
+// worth nothing once the agent's alias is removed.
+function effectiveAccess(saved: SharedAccess | undefined, alias: string | null, mailboxEmail: string): SharedAccess {
+  if (saved === "alias" && !alias) return "none";
+  return saved || defaultSharedAccess(alias, mailboxEmail);
+}
+
+async function sharedAccessFor(shared: MailboxRow, agentId: string, alias: string | null): Promise<SharedAccess> {
+  const { data, error } = await supabaseServiceClient
+    .from("mailbox_access")
+    .select("access")
+    .eq("mailbox_id", shared.id)
+    .eq("agent_id", agentId)
+    .maybeSingle();
+  if (error) throw new Error(`Couldn't load mailbox access: ${error.message}`);
+  return effectiveAccess(data?.access as SharedAccess | undefined, alias, shared.email);
+}
+
+export type SharedAccessEntry = {
+  agentId: string;
+  name: string | null;
+  email: string;
+  alias: string | null;
+  access: SharedAccess;
+  // True while no admin has chosen for this agent.
+  isDefault: boolean;
+};
+
+// Every active agent in the mailbox's organization and what they can use, for
+// the admin's "Who can use it" list. (Admins always see the whole mailbox.)
+export async function listSharedAccess(shared: MailboxRow): Promise<SharedAccessEntry[]> {
+  const [agents, saved] = await Promise.all([
+    supabaseServiceClient
+      .from("agents")
+      .select("id, email, display_name, alias_email")
+      .eq("org_id", shared.org_id)
+      .eq("role", "agent")
+      .eq("is_active", true)
+      .order("display_name", { ascending: true }),
+    supabaseServiceClient.from("mailbox_access").select("agent_id, access").eq("mailbox_id", shared.id),
+  ]);
+  if (agents.error) throw new Error(`Couldn't load agents: ${agents.error.message}`);
+  if (saved.error) throw new Error(`Couldn't load mailbox access: ${saved.error.message}`);
+
+  const chosen = new Map((saved.data || []).map((r) => [r.agent_id as string, r.access as SharedAccess]));
+  return (agents.data || []).map((a) => {
+    const alias: string | null = a.alias_email || null;
+    return {
+      agentId: a.id,
+      name: a.display_name || null,
+      email: a.email,
+      alias,
+      access: effectiveAccess(chosen.get(a.id), alias, shared.email),
+      isDefault: !chosen.has(a.id),
+    };
+  });
+}
+
+// --- Picking the mailbox for a request ----------------------------------------
+
 export type MailContext = {
   actor: Actor;
   mailbox: MailboxConfig;
   row: MailboxRow | null;
   source: "own" | "shared" | "jetzt";
-  // Agents on a shared mailbox only see mail to or from their alias...
+  // Agents limited to their alias only see mail to or from it...
   filterAddress: string | null;
-  // ...and send as it.
+  // ...and send as it. Unset: the mailbox's own name and address.
   sendAs?: { name: string; address: string };
 };
 
-// Which mailbox this request's user works in, ready to use.
+// Which mailbox this request's user works in, ready to use: their own; else
+// the organization's shared one, as far as an admin lets them; else (JETZT
+// only) JETZT's original mailbox, through their alias.
 export async function getMailContext(req: NextRequest): Promise<{ context: MailContext; error?: undefined } | { context?: undefined; error: NextResponse }> {
   const { actor, error } = await getActor(req);
   if (error) return { error };
@@ -237,42 +320,79 @@ export async function getMailContext(req: NextRequest): Promise<{ context: MailC
       };
     }
 
-    const shared = await sharedMailbox(actor.orgId);
-    const legacy = !shared && actor.orgId === FOUNDING_ORG_ID ? envMailbox() : null;
-    if (!shared && !legacy) {
-      throw new MailboxError(
-        "No mailbox is connected yet. Connect your own below, or ask your admin to connect your organization's.",
-        409,
-        "no_mailbox"
-      );
+    const isAdmin = ADMIN_ROLES.includes(actor.role);
+    const [shared, { data: agent }] = await Promise.all([
+      sharedMailbox(actor.orgId),
+      supabaseServiceClient.from("agents").select("alias_email, display_name").eq("id", actor.agentId).single(),
+    ]);
+    const alias: string | null = agent?.alias_email || null;
+    const name: string = agent?.display_name || actor.email;
+
+    if (shared) {
+      const access = isAdmin ? "full" : await sharedAccessFor(shared, actor.agentId, alias);
+      if (access === "full") {
+        return {
+          context: {
+            actor,
+            mailbox: await configFor(shared),
+            row: shared,
+            source: "shared",
+            filterAddress: null,
+            // Their alias when it's on this mailbox; otherwise the mailbox's
+            // own name and address (a Gmail can't send as someone else).
+            sendAs: alias && domainOf(alias) === domainOf(shared.email) ? { name, address: alias } : undefined,
+          },
+        };
+      }
+      if (access === "alias" && alias) {
+        return {
+          context: {
+            actor,
+            mailbox: await configFor(shared),
+            row: shared,
+            source: "shared",
+            filterAddress: alias,
+            sendAs: { name, address: alias },
+          },
+        };
+      }
     }
 
-    const { data: agent } = await supabaseServiceClient
-      .from("agents")
-      .select("alias_email, display_name")
-      .eq("id", actor.agentId)
-      .single();
-    const isAdmin = ADMIN_ROLES.includes(actor.role);
-    if (!isAdmin && !agent?.alias_email) {
+    // JETZT's original mailbox: JETZT's mail until it connects a shared one,
+    // and afterwards for JETZT agents who weren't given access to that.
+    const legacy = actor.orgId === FOUNDING_ORG_ID ? envMailbox() : null;
+    if (legacy && (isAdmin || alias)) {
+      return {
+        context: {
+          actor,
+          mailbox: legacy,
+          row: null,
+          source: "jetzt",
+          filterAddress: isAdmin ? null : alias,
+          sendAs: alias ? { name, address: alias } : undefined,
+        },
+      };
+    }
+
+    if (shared) {
+      throw new MailboxError(
+        "You haven't been given access to your organization's mailbox. Ask your admin for access, or connect your own mailbox below.",
+        403,
+        "no_access"
+      );
+    }
+    if (legacy) {
       throw new MailboxError(
         "You don't have an alias on your organization's shared mailbox. Connect your own mailbox below, or ask your admin for an alias.",
         409,
         "no_alias"
       );
     }
-
-    return {
-      context: {
-        actor,
-        mailbox: shared ? await configFor(shared) : legacy!,
-        row: shared,
-        source: shared ? "shared" : "jetzt",
-        filterAddress: isAdmin ? null : agent!.alias_email,
-        sendAs: agent?.alias_email
-          ? { name: agent.display_name || actor.email, address: agent.alias_email }
-          : undefined,
-      },
-    };
+    throw new MailboxError(
+      "No mailbox is connected yet. Connect your own below, or ask your admin to connect your organization's.",
+      409,
+      "no_mailbox"
+    );
   } catch (err) {
     return { error: mailboxErrorResponse(err) };
   }
@@ -388,6 +508,14 @@ export async function saveMailbox(input: MailboxInput): Promise<MailboxRow> {
   };
 
   const existing = input.agentId ? await ownMailbox(input.agentId) : await sharedMailbox(input.orgId);
+
+  // A different address on the shared mailbox starts over from the defaults:
+  // whoever could use the old mailbox doesn't automatically get the new one.
+  if (existing && !existing.agent_id && existing.email.toLowerCase() !== input.email.toLowerCase()) {
+    const { error: clearError } = await supabaseServiceClient.from("mailbox_access").delete().eq("mailbox_id", existing.id);
+    if (clearError) throw new Error(`Couldn't save the mailbox: ${clearError.message}`);
+  }
+
   const query = existing
     ? supabaseServiceClient.from("mailboxes").update(fields).eq("id", existing.id)
     : supabaseServiceClient.from("mailboxes").insert([fields]);

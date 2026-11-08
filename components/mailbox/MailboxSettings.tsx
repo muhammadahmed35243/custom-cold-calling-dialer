@@ -17,11 +17,24 @@ type MailboxSummary = {
   updatedAt: string;
 };
 
+type SharedAccess = "full" | "alias" | "none";
+
+type AccessEntry = {
+  agentId: string;
+  name: string | null;
+  email: string;
+  alias: string | null;
+  access: SharedAccess;
+  isDefault: boolean;
+};
+
 type MailboxInfo = {
   own: MailboxSummary | null;
   shared: MailboxSummary | null;
   jetztFallback: boolean;
+  jetztMailbox: boolean;
   canManageShared: boolean;
+  sharedAccess: AccessEntry[] | null;
   googleAvailable: boolean;
   ready: boolean;
 };
@@ -65,6 +78,7 @@ export function MailboxSettings({
   const [busy, setBusy] = useState<"" | "connect" | "google" | "disconnect">("");
   const [error, setError] = useState<string | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [savingAccess, setSavingAccess] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -177,6 +191,38 @@ export function MailboxSettings({
     setShowForm(true);
   };
 
+  // What one agent can use of the shared mailbox; saved as soon as it changes.
+  const setAccess = async (entry: AccessEntry, access: SharedAccess) => {
+    if (!mailbox) return;
+    setSavingAccess(entry.agentId);
+    setError(null);
+    try {
+      const res = await authedFetch(`/api/mailboxes/${mailbox.id}/access`, {
+        method: "PATCH",
+        body: JSON.stringify({ agentId: entry.agentId, access }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(body.error || "Couldn't change what that agent can use");
+        return;
+      }
+      setInfo((prev) =>
+        prev?.sharedAccess
+          ? {
+              ...prev,
+              sharedAccess: prev.sharedAccess.map((a) =>
+                a.agentId === entry.agentId ? { ...a, access, isDefault: false } : a
+              ),
+            }
+          : prev
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't change what that agent can use");
+    } finally {
+      setSavingAccess(null);
+    }
+  };
+
   return (
     <section className="bg-card border border-border rounded-xl p-6 space-y-4">
       <div>
@@ -186,7 +232,7 @@ export function MailboxSettings({
         <p className="text-xs text-muted-foreground mt-1">
           {scope === "own"
             ? "Connect your own email to read it here and send call follow-ups from it. Only you can see it."
-            : "Shared by your team for call follow-ups and Mail. Agents see only mail to or from their alias; admins see all of it. An agent who connects their own mailbox uses that instead."}
+            : "Shared by your team for call follow-ups and Mail. Admins see all of it; once it's connected, you choose below what each agent can use. An agent who connects their own mailbox uses that instead."}
         </p>
       </div>
 
@@ -257,6 +303,48 @@ export function MailboxSettings({
               ? "Not connected yet."
               : "Not connected yet. Ask your admin to connect one."}
         </p>
+      )}
+
+      {scope === "shared" && mailbox && info.sharedAccess && (
+        <div className="space-y-3 border-t border-border pt-4">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Who can use it</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              &ldquo;Whole mailbox&rdquo; shows the agent everything in {mailbox.email}, and their mail goes out from it.
+              &ldquo;Only their alias&rdquo; shows just mail to or from the agent&apos;s alias.
+              {info.jetztMailbox && " Agents with no access keep using JETZT's own mailbox through their alias."}
+            </p>
+          </div>
+          {info.sharedAccess.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No agents yet. Add them in Manage Agents.</p>
+          ) : (
+            <ul className="divide-y divide-border rounded-lg border border-border">
+              {info.sharedAccess.map((entry) => (
+                <li key={entry.agentId} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="text-sm text-foreground truncate">{entry.name || entry.email}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {entry.alias ? `Alias: ${entry.alias}` : "No alias"}
+                    </div>
+                  </div>
+                  <select
+                    aria-label={`What ${entry.name || entry.email} can use`}
+                    value={entry.access}
+                    disabled={savingAccess === entry.agentId}
+                    onChange={(e) => setAccess(entry, e.target.value as SharedAccess)}
+                    className="px-2 py-1.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50"
+                  >
+                    <option value="full">Whole mailbox</option>
+                    <option value="alias" disabled={!entry.alias}>
+                      Only their alias
+                    </option>
+                    <option value="none">No access</option>
+                  </select>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       {error && (

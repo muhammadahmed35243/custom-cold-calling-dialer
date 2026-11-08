@@ -114,7 +114,7 @@ export default function MailPage() {
         setMessages(result.messages || []);
         setActiveMailbox(result.mailbox || null);
         setMailboxProblem(null);
-      } else if (["no_mailbox", "no_alias", "reconnect"].includes(result.code)) {
+      } else if (["no_mailbox", "no_alias", "no_access", "reconnect"].includes(result.code)) {
         setMailboxProblem(result.error);
         setMessages([]);
       } else {
