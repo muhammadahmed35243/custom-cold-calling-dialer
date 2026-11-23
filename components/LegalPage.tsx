@@ -19,7 +19,7 @@ export function LegalPage({
       <MarkReady />
       <header className="border-b border-border">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link href="/" aria-label="JETZT Dialer home">
+          <Link href="/" aria-label="DIDIBYTE Dialer home">
             <JetztLogo className="h-7 w-auto" />
           </Link>
           <Link href="/auth/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -39,7 +39,7 @@ export function LegalPage({
 
       <footer className="border-t border-border">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
-          <span>&copy; {new Date().getFullYear()} JETZT</span>
+          <span>&copy; {new Date().getFullYear()} DIDIBYTE</span>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>

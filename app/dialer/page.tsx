@@ -1030,7 +1030,7 @@ export default function DialerPage() {
                     type="checkbox"
                     checked={replaceExisting}
                     onChange={(e) => setReplaceExisting(e.target.checked)}
-                    className="h-4 w-4 rounded border-input accent-[#FF9500]"
+                    className="h-4 w-4 rounded border-input accent-[#1D1D1F]"
                   />
                   Replace existing pending leads with this upload
                 </label>

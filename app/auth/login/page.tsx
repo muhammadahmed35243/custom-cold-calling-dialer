@@ -51,10 +51,6 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-background dotted-bg px-4 py-10 overflow-hidden">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full bg-brand/20 blur-3xl"
-      />
       <div className="relative bg-card border border-border rounded-2xl shadow-lift p-6 sm:p-8 max-w-md w-full">
         <div className="mb-8">
           <Logo />

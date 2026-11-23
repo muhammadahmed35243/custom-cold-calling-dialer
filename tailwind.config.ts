@@ -9,8 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-instrument-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-jetbrains-mono)", "ui-monospace", "monospace"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       colors: {
         background: "oklch(var(--background) / <alpha-value>)",
@@ -19,8 +19,7 @@ const config: Config = {
           DEFAULT: "oklch(var(--card) / <alpha-value>)",
           foreground: "oklch(var(--card-foreground) / <alpha-value>)",
         },
-        // primary reuses the brand orange variables directly -- primary
-        // buttons ARE the brand color now, not a separate near-black token.
+        // Primary buttons use the brand colour (DIDIBYTE near-black).
         primary: {
           DEFAULT: "rgb(var(--brand) / <alpha-value>)",
           foreground: "rgb(var(--brand-foreground) / <alpha-value>)",
@@ -48,6 +47,8 @@ const config: Config = {
           // bright brand colour alone is too faint to read as text.
           strong: "rgb(var(--brand-strong) / <alpha-value>)",
           soft: "rgb(var(--brand-soft) / <alpha-value>)",
+          // DIDIBYTE's red accent dot.
+          dot: "rgb(var(--brand-dot) / <alpha-value>)",
         },
         destructive: {
           DEFAULT: "oklch(var(--destructive) / <alpha-value>)",
@@ -60,10 +61,10 @@ const config: Config = {
       boxShadow: {
         // Soft, layered shadows: cards sit just above the page, popovers
         // and dialogs clearly above everything.
-        soft: "0 1px 2px 0 rgb(28 25 23 / 0.04), 0 1px 3px 0 rgb(28 25 23 / 0.06)",
-        "soft-hover": "0 2px 4px -1px rgb(28 25 23 / 0.06), 0 8px 20px -4px rgb(28 25 23 / 0.10)",
-        lift: "0 12px 32px -8px rgb(28 25 23 / 0.18), 0 4px 8px -4px rgb(28 25 23 / 0.08)",
-        glow: "0 1px 2px 0 rgb(180 95 0 / 0.25), 0 4px 12px -2px rgb(255 149 0 / 0.35)",
+        soft: "0 1px 2px 0 rgb(39 39 45 / 0.04), 0 15px 40px 0 rgb(39 39 45 / 0.03)",
+        "soft-hover": "0 2px 6px 0 rgb(39 39 45 / 0.06), 0 20px 48px -8px rgb(39 39 45 / 0.10)",
+        lift: "0 24px 64px -16px rgb(29 29 31 / 0.22), 0 4px 12px -4px rgb(29 29 31 / 0.08)",
+        glow: "0 1px 2px 0 rgb(29 29 31 / 0.20), 0 6px 16px -4px rgb(29 29 31 / 0.25)",
       },
       borderRadius: {
         sm: "calc(var(--radius) * 0.6)",

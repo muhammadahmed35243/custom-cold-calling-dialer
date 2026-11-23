@@ -232,7 +232,7 @@ export default function AdminDashboard() {
               onClick={() => setTab("support")}
               className={`tab ${tab === "support" ? "tab-active" : ""}`}
             >
-              Contact JETZT
+              Contact DIDIBYTE
             </button>
           )}
           {viewedOrg?.voiceAssistantEnabled && VOICE_AGENT_TABS.map(({ key, label }) => (

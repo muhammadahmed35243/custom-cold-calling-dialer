@@ -238,7 +238,7 @@ export function MailboxSettings({
 
       {!info.ready && (
         <div className="p-3 rounded-lg border border-brand/30 bg-brand/10 text-sm text-foreground">
-          Mailbox connections aren&apos;t switched on yet. JETZT needs to add the mailbox encryption key.
+          Mailbox connections aren&apos;t switched on yet. DIDIBYTE needs to add the mailbox encryption key.
         </div>
       )}
 
@@ -279,7 +279,7 @@ export function MailboxSettings({
               </button>
               {confirmDisconnect ? (
                 <span className="flex items-center gap-2 text-xs">
-                  <span className="text-muted-foreground">Remove it from JETZT Dialer?</span>
+                  <span className="text-muted-foreground">Remove it from DIDIBYTE Dialer?</span>
                   <button onClick={disconnect} disabled={!!busy} className="font-medium text-destructive hover:underline disabled:opacity-50">
                     {busy === "disconnect" ? "Disconnecting..." : "Disconnect"}
                   </button>

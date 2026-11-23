@@ -21,7 +21,7 @@ const CATEGORIES: { key: string; label: string; hint: string }[] = [
   },
   { key: "issue", label: "Report a problem", hint: "Something isn't working: calls, recordings, emails, the dialer." },
   { key: "billing", label: "Billing question", hint: "Your usage, statement or prices." },
-  { key: "other", label: "Something else", hint: "Anything else you'd like to ask JETZT." },
+  { key: "other", label: "Something else", hint: "Anything else you'd like to ask DIDIBYTE." },
 ];
 
 const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.label]));
@@ -96,7 +96,7 @@ export function SupportTab() {
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
       <form onSubmit={send} className="lg:col-span-3 card p-6 space-y-4">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Contact JETZT</h2>
+          <h2 className="text-sm font-semibold text-foreground">Contact DIDIBYTE</h2>
           <p className="text-xs text-muted-foreground mt-1">
             Ask for a change, report a problem or ask about billing. We reply by email.
           </p>
@@ -158,7 +158,7 @@ export function SupportTab() {
         )}
         {sentNotice && (
           <div role="status" className="p-3 bg-accent-green/10 border border-accent-green/20 rounded-lg text-sm text-foreground">
-            Sent. JETZT will reply to you by email.
+            Sent. DIDIBYTE will reply to you by email.
           </div>
         )}
 

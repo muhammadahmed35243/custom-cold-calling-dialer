@@ -167,7 +167,7 @@ export function MessagesPanel({ onNewCountChange }: { onNewCountChange?: (count:
           {shown.map((m) => {
             const isLong = m.message.length > PREVIEW_CHARS;
             const isOpen = expanded.has(m.id);
-            const replySubject = `Re: ${m.subject || (m.source === "website" ? "your message to JETZT" : "your request")}`;
+            const replySubject = `Re: ${m.subject || (m.source === "website" ? "your message to DIDIBYTE" : "your request")}`;
             return (
               <article key={m.id} className="card p-5 space-y-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">

@@ -293,7 +293,7 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
         <div className="card p-6">
           <h2 className="text-sm font-semibold text-foreground mb-1">Need a number?</h2>
           <p className="text-sm text-muted-foreground">
-            Your organization can&apos;t buy numbers right now. Ask JETZT to raise your number limit.
+            Your organization can&apos;t buy numbers right now. Ask DIDIBYTE to raise your number limit.
           </p>
         </div>
       ) : (
@@ -306,7 +306,7 @@ export function PhoneNumbersTab({ orgQuery = "", canBuy = true }: { orgQuery?: s
 
           {atLimit ? (
             <p className="text-sm text-muted-foreground">
-              You have {limit} of {limit} numbers. Release one below to buy another, or ask JETZT to raise the limit.
+              You have {limit} of {limit} numbers. Release one below to buy another, or ask DIDIBYTE to raise the limit.
             </p>
           ) : (
             <form onSubmit={handleSearch} className="space-y-4">

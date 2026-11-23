@@ -45,7 +45,7 @@ export function AppHeader({
           <button
             onClick={() => go(isAdmin ? "/dashboard" : "/dialer")}
             className="shrink-0 rounded-md"
-            aria-label="JETZT Dialer home"
+            aria-label="DIDIBYTE Dialer home"
           >
             <Logo />
           </button>
@@ -57,7 +57,7 @@ export function AppHeader({
                   key={item.href}
                   onClick={() => go(item.href)}
                   aria-current={active ? "page" : undefined}
-                  className={`h-9 px-3 text-sm font-medium rounded-lg transition-colors ${
+                  className={`h-9 px-3 font-mono text-[13px] rounded-full transition-colors ${
                     active
                       ? "bg-brand-soft text-foreground"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary"
@@ -112,7 +112,7 @@ export function AppHeader({
                   key={item.href}
                   onClick={() => go(item.href)}
                   aria-current={active ? "page" : undefined}
-                  className={`h-11 px-3 text-left text-sm font-medium rounded-lg ${
+                  className={`h-11 px-3 text-left font-mono text-[13px] rounded-lg ${
                     active ? "bg-brand-soft text-foreground" : "text-foreground hover:bg-secondary"
                   }`}
                 >

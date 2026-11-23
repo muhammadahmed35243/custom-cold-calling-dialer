@@ -8,22 +8,18 @@ import { JetztLogo } from "./Logo";
 export function BrandedLoader() {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background">
-      <div className="absolute inset-0 overflow-hidden hidden md:block">
-        <div className="absolute -top-1/2 -right-1/2 h-full w-full rounded-full bg-gradient-to-br from-brand/10 via-transparent to-transparent blur-3xl animate-pulse" />
-        <div className="absolute -bottom-1/2 -left-1/2 h-full w-full rounded-full bg-gradient-to-tr from-brand/10 via-transparent to-transparent blur-3xl animate-pulse" />
-      </div>
 
       <div className="relative flex flex-col items-center gap-8">
         <div className="animate-fade-in">
-          <JetztLogo className="h-16 w-auto" />
+          <JetztLogo className="h-14 w-auto" />
         </div>
 
         <div className="text-center animate-fade-in-delayed">
-          <p className="text-sm text-muted-foreground">Now, not next quarter</p>
+          <p className="font-mono text-xs text-muted-foreground">&lt; making people capable /&gt;</p>
         </div>
 
         <div className="flex gap-2 animate-fade-in-delayed-2">
-          <div className="h-2 w-2 rounded-full bg-brand animate-bounce" style={{ animationDelay: "0s" }} />
+          <div className="h-2 w-2 rounded-full bg-brand-dot animate-bounce" style={{ animationDelay: "0s" }} />
           <div className="h-2 w-2 rounded-full bg-brand animate-bounce" style={{ animationDelay: "0.1s" }} />
           <div className="h-2 w-2 rounded-full bg-brand animate-bounce" style={{ animationDelay: "0.2s" }} />
         </div>

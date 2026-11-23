@@ -3,40 +3,41 @@
 @tailwind utilities;
 
 /*
- * JETZT theme: warm white surfaces, near-black type and the JETZT
- * yellow-orange as the one accent. Every colour in the app comes from these
- * tokens (see tailwind.config.ts), so changing one here changes it everywhere.
+ * DIDIBYTE theme (matches didibyte.com): white surfaces, near-black #1D1D1F
+ * type and buttons, cool greys, light-grey bands (#F5F5F7), one red accent dot
+ * (#FF3131), Inter for text and Fira Code for labels, buttons and navigation.
+ * Every colour in the app comes from these tokens (see tailwind.config.ts).
  */
 :root {
-  /* Page and surfaces: a barely-warm white page with pure white cards. */
-  --background: 0.985 0.004 85;
-  --foreground: 0.18 0.006 60;
+  --background: 1 0 0;
+  --foreground: 0.214 0.004 286;
   --card: 1 0 0;
-  --card-foreground: 0.18 0.006 60;
-  --secondary: 0.962 0.005 85;
-  --secondary-foreground: 0.22 0.006 60;
-  --muted: 0.962 0.005 85;
-  /* Secondary text: dark enough to pass 4.5:1 contrast on white and on the page. */
-  --muted-foreground: 0.5 0.012 60;
-  --accent: 0.962 0.005 85;
-  --accent-foreground: 0.22 0.006 60;
+  --card-foreground: 0.214 0.004 286;
+  --secondary: 0.97 0.002 286;
+  --secondary-foreground: 0.214 0.004 286;
+  --muted: 0.97 0.002 286;
+  /* #6E6E73-ish secondary text: passes 4.5:1 contrast on white. */
+  --muted-foreground: 0.52 0.009 286;
+  --accent: 0.97 0.002 286;
+  --accent-foreground: 0.214 0.004 286;
   --accent-green: 0.72 0.17 150;
   --accent-green-foreground: 0.4 0.11 150;
 
-  /* Brand: JETZT yellow-orange. Text on it is near-black (white on this
-     yellow is unreadable); --brand-strong is the readable amber for text and
-     icons on white; --brand-soft is a pale tint for highlights. */
-  --brand: 255 149 0;
-  --brand-foreground: 28 25 23;
-  --brand-strong: 176 92 0;
-  --brand-soft: 255 244 224;
+  /* Brand: DIDIBYTE near-black. --brand-strong is the same for text on white;
+     --brand-soft is the light grey used for highlights and selected items;
+     --brand-dot is the red accent dot. */
+  --brand: 29 29 31;
+  --brand-foreground: 255 255 255;
+  --brand-strong: 29 29 31;
+  --brand-soft: 245 245 247;
+  --brand-dot: 255 49 49;
 
   --destructive: 0.577 0.215 27.325;
   --destructive-foreground: 0.985 0 0;
-  --border: 0.915 0.006 80;
-  --input: 0.88 0.008 80;
-  --ring: 0.78 0.16 68;
-  --radius: 0.75rem;
+  --border: 0.935 0.004 286;
+  --input: 0.9 0.006 286;
+  --ring: 0.214 0.004 286;
+  --radius: 0.625rem;
 }
 
 * {
@@ -54,11 +55,12 @@ html {
 }
 
 body {
-  font-feature-settings: "ss01", "cv11";
+  font-feature-settings: "cv11", "ss01";
+  letter-spacing: -0.006em;
 }
 
 ::selection {
-  background: rgb(var(--brand) / 0.25);
+  background: rgb(var(--brand) / 0.12);
 }
 
 /* One visible, on-brand focus ring for keyboard users everywhere. */
@@ -107,21 +109,21 @@ td,
  */
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg text-sm font-medium whitespace-nowrap select-none
+    @apply inline-flex items-center justify-center gap-2 h-10 px-5 rounded-full font-mono text-[13px] font-normal whitespace-nowrap select-none
       transition-[background-color,border-color,color,box-shadow,transform] duration-150
       active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
   }
   .btn-sm {
-    @apply h-8 px-3 text-xs rounded-md;
+    @apply h-8 px-3.5 text-[12px];
   }
   .btn-lg {
-    @apply h-12 px-6 text-base rounded-xl;
+    @apply h-12 px-7 text-sm;
   }
   .btn-primary {
-    @apply bg-primary text-primary-foreground shadow-glow hover:bg-[#F28C00];
+    @apply bg-primary text-primary-foreground hover:bg-black;
   }
   .btn-secondary {
-    @apply bg-card text-foreground border border-input shadow-soft hover:bg-secondary hover:border-foreground/20;
+    @apply bg-card text-foreground border border-input hover:bg-secondary hover:border-foreground/30;
   }
   .btn-ghost {
     @apply text-muted-foreground hover:text-foreground hover:bg-secondary;
@@ -145,18 +147,18 @@ td,
       placeholder:text-muted-foreground/70
       transition-[border-color,box-shadow] duration-150
       hover:border-foreground/25
-      focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15
+      focus:outline-none focus:border-foreground/60 focus:ring-4 focus:ring-foreground/[0.06]
       disabled:opacity-60 disabled:cursor-not-allowed;
   }
   textarea.field {
     @apply h-auto py-2;
   }
   .field-label {
-    @apply block text-xs font-medium text-muted-foreground mb-1.5;
+    @apply block font-mono text-[11px] text-muted-foreground mb-1.5;
   }
 
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+    @apply font-mono text-[11px] font-normal uppercase tracking-[0.08em] text-muted-foreground;
   }
 
   .pill {
@@ -168,10 +170,18 @@ td,
     @apply flex gap-1 overflow-x-auto scrollbar-none border-b border-border -mx-4 px-4 sm:mx-0 sm:px-0;
   }
   .tab {
-    @apply relative shrink-0 px-3 py-2.5 text-sm font-medium text-muted-foreground whitespace-nowrap transition-colors hover:text-foreground
+    @apply relative shrink-0 px-3 py-2.5 font-mono text-[13px] font-normal text-muted-foreground whitespace-nowrap transition-colors hover:text-foreground
       after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:rounded-full after:bg-transparent;
   }
   .tab-active {
     @apply text-foreground after:bg-brand;
+  }
+
+  /* DIDIBYTE's red dot, e.g. before a kicker: "● DIDIBYTE · TECHNOLOGY WITH PURPOSE". */
+  .dot {
+    @apply inline-block h-1.5 w-1.5 rounded-full bg-brand-dot;
+  }
+  .kicker {
+    @apply inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground;
   }
 }

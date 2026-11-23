@@ -397,7 +397,7 @@ export function UsageTab({ orgQuery = "" }: { orgQuery?: string }) {
             {usage.grants.length > 0 && (
               <div className="card overflow-hidden">
                 <div className="px-6 py-4 border-b border-border">
-                  <h2 className="text-sm font-semibold text-foreground">Free credit &amp; bonus minutes from JETZT</h2>
+                  <h2 className="text-sm font-semibold text-foreground">Free credit &amp; bonus minutes from DIDIBYTE</h2>
                   <p className="text-xs text-muted-foreground mt-1">
                     Credit pays your charges first, carrying over month to month until used. Bonus minutes make calls
                     to leads in that country free. Neither counts against your budget.

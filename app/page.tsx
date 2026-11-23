@@ -100,22 +100,17 @@ function Homepage() {
       </header>
 
       <section className="relative overflow-hidden dotted-bg">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-48 left-1/2 h-[560px] w-[900px] max-w-[160vw] -translate-x-1/2 rounded-full bg-brand/25 blur-3xl"
-        />
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-20 sm:pb-28 flex flex-col items-center text-center">
-          <span className="inline-flex items-center gap-2 text-xs font-medium text-brand-strong bg-card/80 border border-brand/30 shadow-soft px-3 py-1.5 rounded-full mb-6">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand" aria-hidden="true" />
-            A calling workspace, not just a dialer
+          <span className="kicker mb-8">
+            <span className="dot" aria-hidden="true" />
+            DIDIBYTE &middot; Dialer
           </span>
-          <h1 className="w-full text-[2.5rem] leading-[1.08] sm:text-6xl font-semibold tracking-tight text-foreground max-w-4xl">
-            The cold-calling workspace built for{" "}
-            <span className="relative whitespace-nowrap">
-              <span className="relative z-10">outbound teams</span>
-              <span aria-hidden="true" className="absolute inset-x-0 bottom-1 sm:bottom-2 h-3 sm:h-4 bg-brand/35 -z-0 rounded-sm" />
-            </span>
+          <h1 className="w-full font-mono font-medium text-muted-foreground text-[2.1rem] leading-[1.15] sm:text-[3.25rem] tracking-[-0.06em] max-w-4xl">
+            &lt; making calls count /&gt;
           </h1>
+          <p className="w-full text-xl sm:text-2xl font-semibold tracking-tight text-foreground max-w-3xl mt-6">
+            The cold-calling workspace built for outbound teams.
+          </p>
           <p className="w-full text-base sm:text-lg text-muted-foreground max-w-2xl mt-6 leading-relaxed">
             Phone or browser calling, automatic recording and transcripts, and follow-up emails
             written from what was actually said — all in one place your team already works in.
@@ -177,7 +172,7 @@ function Homepage() {
 
       <section id="features" className="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-24 scroll-mt-16">
         <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-14">
-          <div className="eyebrow mb-3">Features</div>
+          <div className="kicker mb-4"><span className="dot" aria-hidden="true" />Features</div>
           <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">The calling fundamentals, built in</h2>
           <p className="text-muted-foreground mt-3">Everything else below is on top of these.</p>
         </div>
@@ -197,12 +192,12 @@ function Homepage() {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
-            <span className="text-xs font-medium text-brand-strong bg-brand-soft border border-brand/25 px-3 py-1 rounded-full">Inbound, covered</span>
+            <span className="kicker"><span className="dot" aria-hidden="true" />Inbound, covered</span>
             <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground mt-4">
               An AI voice agent answers when your team can&apos;t
             </h2>
             <p className="text-muted-foreground mt-4 leading-relaxed">
-              Inbound calls don&apos;t have to go to voicemail. JETZT&apos;s AI voice agent picks up,
+              Inbound calls don&apos;t have to go to voicemail. DIDIBYTE&apos;s AI voice agent picks up,
               has a real conversation with the caller, and logs it straight into the same
               admin dashboard your team already uses.
             </p>
@@ -220,7 +215,7 @@ function Homepage() {
           <div className="bg-card border border-border rounded-2xl shadow-lift p-5 sm:p-6">
             <div className="flex items-center justify-between mb-5">
               <span className="eyebrow">Incoming call</span>
-              <span className="text-xs font-medium text-brand-strong bg-brand/10 px-2 py-0.5 rounded-full">Answered by AI</span>
+              <span className="pill bg-secondary text-foreground font-mono">Answered by AI</span>
             </div>
             <div className="flex items-center gap-4 mb-5">
               <Avatar name="Unknown Caller" size="md" />
@@ -230,7 +225,7 @@ function Homepage() {
               </div>
             </div>
             <div className="space-y-2.5 text-sm bg-secondary rounded-lg p-4">
-              <div><span className="font-medium text-brand-strong">AI Voice Agent</span> <span className="text-foreground">Thanks for calling JETZT, how can I help today?</span></div>
+              <div><span className="font-medium text-brand-strong">AI Voice Agent</span> <span className="text-foreground">Thanks for calling DIDIBYTE, how can I help today?</span></div>
               <div><span className="font-medium text-foreground">Caller</span> <span className="text-foreground">I&apos;d like a quote for my sales team.</span></div>
               <div><span className="font-medium text-brand-strong">AI Voice Agent</span> <span className="text-foreground">Happy to help, let me grab a few details first.</span></div>
             </div>
@@ -267,7 +262,7 @@ function Homepage() {
           </div>
 
           <div className="order-1 lg:order-2">
-            <span className="text-xs font-medium text-brand-strong bg-brand-soft border border-brand/25 px-3 py-1 rounded-full">After every call</span>
+            <span className="kicker"><span className="dot" aria-hidden="true" />After every call</span>
             <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground mt-4">
               Notes, transcripts, and follow-ups, handled for you
             </h2>
@@ -288,7 +283,7 @@ function Homepage() {
         </div>
       </section>
 
-      <section id="how" className="bg-gradient-to-b from-brand-soft/60 to-background border-y border-border scroll-mt-16">
+      <section id="how" className="bg-secondary border-y border-border scroll-mt-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-24">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">How it works</h2>
@@ -296,7 +291,7 @@ function Homepage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
             {STEPS.map((step, i) => (
               <div key={step.title} className="text-center sm:text-left">
-                <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground font-semibold shadow-glow flex items-center justify-center mb-4 mx-auto sm:mx-0">
+                <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground font-mono flex items-center justify-center mb-4 mx-auto sm:mx-0">
                   {i + 1}
                 </div>
                 <h3 className="font-semibold text-foreground mb-1.5">{step.title}</h3>
@@ -312,7 +307,7 @@ function Homepage() {
           <div className="lg:col-span-2 text-center lg:text-left">
             <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Ready to call smarter?</h2>
             <p className="text-muted-foreground mt-3">
-              Tell us about your team and we&apos;ll get back to you with a setup that fits. Already using JETZT
+              Tell us about your team and we&apos;ll get back to you with a setup that fits. Already using DIDIBYTE
               Dialer? Sign in to get started.
             </p>
             <div className="mt-8">
@@ -340,14 +335,14 @@ function Homepage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <JetztLogo className="h-6 w-auto" />
-            <span className="text-sm text-muted-foreground">Now, not next quarter</span>
+            <span className="text-sm text-muted-foreground">Technology with purpose</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
             <a href="mailto:contact@thejetzt.com" className="hover:text-foreground transition-colors">contact@thejetzt.com</a>
             <a href="mailto:support@thejetzt.com" className="hover:text-foreground transition-colors">support@thejetzt.com</a>
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
-            <span>&copy; {new Date().getFullYear()} JETZT</span>
+            <span>&copy; {new Date().getFullYear()} DIDIBYTE</span>
           </div>
         </div>
       </footer>
